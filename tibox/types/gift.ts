@@ -4,7 +4,13 @@ export type GiftType = "digital" | "flowers" | "cake" | "item" | "experience";
 
 export type GiftStyle = "romantico" | "alegre" | "nostalgico" | "epico" | "fofo";
 
+/** Music genre for the clip's soundtrack — maps to the backend's `genre` field. */
+export type MusicGenre = "romantica" | "animada" | "acustica" | "eletronica" | "instrumental";
+
 export type DeliveryMode = "now" | "scheduled";
+
+/** Physical gift types that require a delivery city. */
+export const PHYSICAL_GIFT_TYPES: readonly GiftType[] = ["flowers", "cake", "item"];
 
 export interface GiftMedia {
   id: string;
@@ -22,6 +28,10 @@ export interface Gift {
   type: GiftType;
   style: GiftStyle;
   song?: string;
+  /** Music genre for the clip's soundtrack (backend field: `genre`). */
+  genre?: MusicGenre;
+  /** Delivery city, required for physical gifts (backend field: `city`). */
+  city?: string;
   deliveryMode: DeliveryMode;
   scheduledFor?: string;
   notifyWhatsapp: boolean;

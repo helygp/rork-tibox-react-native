@@ -2,13 +2,14 @@ import createContextHook from "@nkzw/create-context-hook";
 import { Session, User } from "@supabase/supabase-js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   getAccessToken,
   setSessionFromUrl,
   signInWithMagicLink,
   signInWithOAuth,
+  signInWithPassword,
   signOutSupabase,
   supabase,
   verifyEmailOtp,
@@ -24,28 +25,27 @@ export interface TiboxUser {
 }
 
 /**
- * Modo de validação: entra direto numa conta única de teste, sem login.
- * Coloque DEV_AUTO_LOGIN = false quando for trabalhar no fluxo de login real.
+ * Modo de validação: a conta de teste fixa loga de verdade no Supabase real
+ * (sem precisar digitar e-mail/senha a cada vez), pra validar as jornadas
+ * direto contra o backend. Coloque DEV_AUTO_LOGIN = false quando for
+ * trabalhar no fluxo de login normal.
  */
 const DEV_AUTO_LOGIN = true;
 
-const DEV_USER: TiboxUser = {
-  id: "dev-tibox-account",
-  name: "Conta de Teste",
-  email: "teste@tibox.app",
-  plan: "pro",
-  isGuest: false,
-};
+const DEV_ACCOUNT_EMAIL = process.env.EXPO_PUBLIC_TEST_ACCOUNT_EMAIL as string | undefined;
+const DEV_ACCOUNT_PASSWORD = process.env.EXPO_PUBLIC_TEST_ACCOUNT_PASSWORD as string | undefined;
 
 function mapUser(session: Session | null): TiboxUser | null {
   const u: User | undefined = session?.user;
   if (!u) return null;
+  const isDevAccount = DEV_AUTO_LOGIN && !!DEV_ACCOUNT_EMAIL && u.email === DEV_ACCOUNT_EMAIL;
   return {
     id: u.id,
     name: u.user_metadata?.full_name ?? u.email?.split("@")[0] ?? "Você",
     email: u.email ?? "",
     avatarUrl: u.user_metadata?.avatar_url ?? undefined,
-    plan: (u.app_metadata?.plan as "free" | "pro") ?? "free",
+    // A conta de teste fixa sempre aparece como Pro para liberar todas as telas durante a validação.
+    plan: isDevAccount ? "pro" : (u.app_metadata?.plan as "free" | "pro") ?? "free",
     isGuest: false,
   };
 }
@@ -70,6 +70,28 @@ export const [SessionProvider, useSession] = createContextHook(() => {
     return () => sub.subscription.unsubscribe();
   }, [queryClient]);
 
+  // Silently sign in with the fixed test account once we know there's no
+  // real session yet, so API calls carry a genuine Supabase JWT while still
+  // keeping the "always logged in" dev experience.
+  const [devLoginAttempted, setDevLoginAttempted] = useState(false);
+  useEffect(() => {
+    if (!DEV_AUTO_LOGIN || sessionQuery.isLoading || devLoginAttempted || sessionQuery.data) {
+      return;
+    }
+    setDevLoginAttempted(true);
+    if (!DEV_ACCOUNT_EMAIL || !DEV_ACCOUNT_PASSWORD) {
+      console.log("[Session] DEV_AUTO_LOGIN ligado mas faltam EXPO_PUBLIC_TEST_ACCOUNT_EMAIL/PASSWORD.");
+      return;
+    }
+    void signInWithPassword(DEV_ACCOUNT_EMAIL, DEV_ACCOUNT_PASSWORD).then((result) => {
+      if (result.error) {
+        console.log("[Session] Login da conta de teste falhou:", result.error);
+        return;
+      }
+      void queryClient.invalidateQueries({ queryKey: ["supabase-session"] });
+    });
+  }, [sessionQuery.isLoading, sessionQuery.data, devLoginAttempted, queryClient]);
+
   // Capture auth tokens when a magic-link / OAuth deep link opens the app.
   useEffect(() => {
     const handleUrl = async (url: string | null) => {
@@ -91,15 +113,17 @@ export const [SessionProvider, useSession] = createContextHook(() => {
     return () => sub.remove();
   }, [queryClient]);
 
-  const user = useMemo<TiboxUser | null>(() => {
-    const real = mapUser(sessionQuery.data ?? null);
-    if (real) return real;
-    if (DEV_AUTO_LOGIN) return DEV_USER;
-    return null;
-  }, [sessionQuery.data]);
+  const user = useMemo<TiboxUser | null>(
+    () => mapUser(sessionQuery.data ?? null),
+    [sessionQuery.data],
+  );
 
   const isAuthenticated = !!user;
-  const isHydrated = !sessionQuery.isLoading;
+  // Keep the "loading" state while the silent dev login might still be in
+  // flight, so the UI doesn't flash a sign-in screen before that resolves.
+  const awaitingDevLogin =
+    DEV_AUTO_LOGIN && !sessionQuery.isLoading && !sessionQuery.data && !devLoginAttempted;
+  const isHydrated = !sessionQuery.isLoading && !awaitingDevLogin;
 
   const signIn = useCallback(
     async (

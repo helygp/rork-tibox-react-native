@@ -11,9 +11,10 @@ import {
   listGifts,
   startGeneration,
   updateGift,
-  uploadMedia,
+  uploadGiftMedia,
 } from "@/lib/api";
 import { useSession } from "@/providers/Session";
+import { PHYSICAL_GIFT_TYPES } from "@/types/gift";
 import type { DraftGift, Gift, GiftMedia } from "@/types/gift";
 
 const STORAGE_CACHE_KEY = "tibox.gifts.v1.cache";
@@ -122,6 +123,8 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
     const media = draft.media ?? [];
     const unlockCode = draft.unlockCode ?? generateUnlockCode();
 
+    const isPhysical = PHYSICAL_GIFT_TYPES.includes(draft.type ?? "digital");
+
     const giftPayload: Gift = {
       id: makeId(),
       publicId: makePublicId(),
@@ -133,6 +136,8 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
       type: draft.type ?? "digital",
       style: draft.style ?? "romantico",
       song: draft.song,
+      genre: draft.genre,
+      city: isPhysical ? draft.city : undefined,
       deliveryMode: draft.deliveryMode ?? "now",
       scheduledFor: draft.scheduledFor,
       notifyWhatsapp: draft.notifyWhatsapp ?? false,
@@ -143,39 +148,38 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
 
     // Try API first.
     try {
-      // 1. Upload media.
+      // 1. Create the gift first — the server expects an ID before any media.
+      const created = await createGift({
+        recipientName: giftPayload.recipientName,
+        recipientWhatsapp: giftPayload.recipientWhatsapp,
+        mood: giftPayload.style,
+        genre: giftPayload.genre,
+        message: giftPayload.message,
+        notifyWhatsapp: giftPayload.notifyWhatsapp,
+        deliveryMode: giftPayload.deliveryMode,
+        scheduledFor: giftPayload.scheduledFor,
+        unlockCode,
+        city: giftPayload.city,
+      });
+
+      // 2. Upload each media file now that we have a gift ID.
       const uploadedMedia: GiftMedia[] = [];
-      for (const m of media) {
+      for (let i = 0; i < media.length; i++) {
+        const m = media[i];
         try {
-          const uploaded = await uploadMedia(m.uri, m.kind);
-          uploadedMedia.push({ id: uploaded.id, uri: uploaded.uri, kind: uploaded.kind });
+          const uploaded = await uploadGiftMedia(created.id, m.uri, m.kind, i);
+          uploadedMedia.push(uploaded);
         } catch {
           // Keep the local URI if upload fails.
           uploadedMedia.push(m);
         }
       }
 
-      // 2. Create gift.
-      const mediaIds = uploadedMedia.map((m) => m.id);
-      const created = await createGift({
-        recipientName: giftPayload.recipientName,
-        recipientWhatsapp: giftPayload.recipientWhatsapp,
-        occasion: giftPayload.occasion,
-        message: giftPayload.message,
-        type: giftPayload.type,
-        style: giftPayload.style,
-        deliveryMode: giftPayload.deliveryMode,
-        scheduledFor: giftPayload.scheduledFor,
-        notifyWhatsapp: giftPayload.notifyWhatsapp,
-        unlockCode,
-        mediaIds,
-      });
-
       // 3. Start generation.
       const gift: Gift = {
         ...giftPayload,
         id: created.id,
-        publicId: created.publicId,
+        publicId: created.publicId || giftPayload.publicId,
         status: "generating",
         media: uploadedMedia,
       };
@@ -221,6 +225,11 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
       for (const id of ids) {
         try {
           const status = await getGenerationStatus(id);
+          if (status.status === "ready" || status.status === "scheduled") {
+            if (status.clipUri) {
+              markReady(id, status.clipUri);
+            }
+          }
           if (status.status !== "generating" && status.status !== "draft") {
             setPollingIds((prev) => {
               const next = new Set(prev);

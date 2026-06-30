@@ -15,6 +15,7 @@ import {
   Clock,
   Gift,
   ImagePlus,
+  MapPin,
   MessageCircle,
   Music,
   Palette,
@@ -44,7 +45,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import GradientButton from "@/components/GradientButton";
 import Colors, { Gradients } from "@/constants/colors";
 import { useGiftStore } from "@/providers/GiftStore";
-import type { GiftStyle, GiftType } from "@/types/gift";
+import { PHYSICAL_GIFT_TYPES } from "@/types/gift";
+import type { GiftStyle, GiftType, MusicGenre } from "@/types/gift";
 
 const STEPS = [
   { icon: User, label: "Quem" },
@@ -72,6 +74,14 @@ const OCCASIONS = [
   "Saudade",
   "Conquista",
   "Sem motivo especial",
+];
+
+const GENRES: { key: MusicGenre; label: string; emoji: string }[] = [
+  { key: "romantica", label: "Romântica", emoji: "🎻" },
+  { key: "animada", label: "Animada", emoji: "🎉" },
+  { key: "acustica", label: "Acústica", emoji: "🎸" },
+  { key: "eletronica", label: "Eletrônica", emoji: "🎹" },
+  { key: "instrumental", label: "Instrumental", emoji: "🎼" },
 ];
 
 function StepIndicator({ current }: { current: number }) {
@@ -313,6 +323,8 @@ function TypeStep({
 }) {
   const { draft, updateDraft } = useGiftStore();
   const selectedType = (draft.type as GiftType) ?? "digital";
+  const isPhysical = PHYSICAL_GIFT_TYPES.includes(selectedType);
+  const cityValid = !isPhysical || !!draft.city?.trim();
 
   return (
     <Animated.View entering={FadeInRight.springify()} exiting={FadeOutLeft} style={styles.stepContent}>
@@ -351,9 +363,28 @@ function TypeStep({
         })}
       </View>
 
+      {isPhysical && (
+        <Animated.View entering={FadeInDown.springify()} style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Cidade de entrega</Text>
+          <View style={styles.cityInputWrap}>
+            <MapPin size={16} color={Colors.rose} style={styles.cityIcon} />
+            <TextInput
+              style={styles.cityInput}
+              placeholder="Ex: São Paulo, SP"
+              placeholderTextColor={Colors.textMuted}
+              value={draft.city ?? ""}
+              onChangeText={(t) => updateDraft({ city: t })}
+            />
+          </View>
+          <Text style={styles.cityHint}>
+            Necessária para entregar este presente físico.
+          </Text>
+        </Animated.View>
+      )}
+
       <View style={styles.navRow}>
         <GradientButton label="Voltar" onPress={onBack} variant="ghost" icon={<ArrowLeft size={18} color={Colors.textPrimary} />} style={styles.navHalf} />
-        <GradientButton label="Continuar" onPress={onNext} icon={<ArrowRight size={18} color={Colors.white} />} style={styles.navHalf} />
+        <GradientButton label="Continuar" onPress={onNext} disabled={!cityValid} icon={<ArrowRight size={18} color={Colors.white} />} style={styles.navHalf} />
       </View>
     </Animated.View>
   );
@@ -404,6 +435,26 @@ function StyleStep({
             </Pressable>
           );
         })}
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>Trilha sonora</Text>
+        <View style={styles.chipGrid}>
+          {GENRES.map((g) => {
+            const selected = draft.genre === g.key;
+            return (
+              <Pressable
+                key={g.key}
+                onPress={() => updateDraft({ genre: selected ? undefined : g.key })}
+                style={[styles.chip, selected && styles.chipSelected]}
+              >
+                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                  {g.emoji} {g.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       <View style={styles.navRow}>
@@ -670,8 +721,26 @@ function ReviewStep({
             <Text style={styles.reviewCardValue}>
               {styleMeta.emoji} {styleMeta.label}
             </Text>
+            {draft.genre && (
+              <Text style={styles.reviewCardHint}>
+                Trilha: {GENRES.find((g) => g.key === draft.genre)?.label}
+              </Text>
+            )}
           </View>
         </View>
+
+        {/* City card (physical gifts only) */}
+        {draft.city ? (
+          <View style={styles.reviewCard}>
+            <View style={styles.reviewCardIcon}>
+              <MapPin size={16} color={Colors.coral} />
+            </View>
+            <View style={styles.flex1}>
+              <Text style={styles.reviewCardLabel}>Cidade de entrega</Text>
+              <Text style={styles.reviewCardValue}>{draft.city}</Text>
+            </View>
+          </View>
+        ) : null}
 
         {/* Delivery card */}
         <View style={styles.reviewCard}>
@@ -988,6 +1057,31 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.rose,
     alignItems: "center",
     justifyContent: "center",
+  },
+  /* City field */
+  cityInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.inkCard,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+  },
+  cityIcon: {
+    marginRight: 8,
+  },
+  cityInput: {
+    flex: 1,
+    paddingVertical: 14,
+    color: Colors.textPrimary,
+    fontSize: 16,
+  },
+  cityHint: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
   },
   /* Navigation row */
   navRow: {

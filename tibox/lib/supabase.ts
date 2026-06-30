@@ -63,6 +63,21 @@ export async function signInWithOAuth(
   }
 }
 
+/** Sign in with email + password (used for the fixed test account). */
+export async function signInWithPassword(
+  email: string,
+  password: string,
+): Promise<{ error?: string }> {
+  try {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message };
+    return {};
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erro desconhecido.";
+    return { error: message };
+  }
+}
+
 /** Send magic-link OTP to the given email. Returns success; the user clicks the link in their inbox. */
 export async function signInWithMagicLink(
   email: string,
