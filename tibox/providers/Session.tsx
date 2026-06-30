@@ -33,7 +33,7 @@ const DEV_USER: TiboxUser = {
   id: "dev-tibox-account",
   name: "Conta de Teste",
   email: "teste@tibox.app",
-  plan: "free",
+  plan: "pro",
   isGuest: false,
 };
 
