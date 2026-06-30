@@ -50,6 +50,22 @@ function mapUser(session: Session | null): TiboxUser | null {
   };
 }
 
+/**
+ * Local fallback used while the fixed test account isn't authenticated for
+ * real yet (missing credentials or login failure). Keeps the "always
+ * logged in, Pro unlocked" dev experience so journeys never get stuck on the
+ * sign-in screen, even though API calls won't carry a real JWT in this case.
+ */
+function makeDevGuest(): TiboxUser {
+  return {
+    id: "dev-guest",
+    name: "Conta de Teste",
+    email: "",
+    plan: "pro",
+    isGuest: true,
+  };
+}
+
 export const [SessionProvider, useSession] = createContextHook(() => {
   const queryClient = useQueryClient();
 
@@ -72,20 +88,25 @@ export const [SessionProvider, useSession] = createContextHook(() => {
 
   // Silently sign in with the fixed test account once we know there's no
   // real session yet, so API calls carry a genuine Supabase JWT while still
-  // keeping the "always logged in" dev experience.
+  // keeping the "always logged in" dev experience. If real credentials aren't
+  // configured yet (or the login fails), fall back to a local guest session
+  // immediately instead of leaving the user stuck on the sign-in screen.
   const [devLoginAttempted, setDevLoginAttempted] = useState(false);
+  const [devFallbackGuest, setDevFallbackGuest] = useState<TiboxUser | null>(null);
   useEffect(() => {
     if (!DEV_AUTO_LOGIN || sessionQuery.isLoading || devLoginAttempted || sessionQuery.data) {
       return;
     }
     setDevLoginAttempted(true);
     if (!DEV_ACCOUNT_EMAIL || !DEV_ACCOUNT_PASSWORD) {
-      console.log("[Session] DEV_AUTO_LOGIN ligado mas faltam EXPO_PUBLIC_TEST_ACCOUNT_EMAIL/PASSWORD.");
+      console.log("[Session] DEV_AUTO_LOGIN ligado mas faltam EXPO_PUBLIC_TEST_ACCOUNT_EMAIL/PASSWORD — entrando como visitante (Pro) pra não travar o teste das jornadas.");
+      setDevFallbackGuest(makeDevGuest());
       return;
     }
     void signInWithPassword(DEV_ACCOUNT_EMAIL, DEV_ACCOUNT_PASSWORD).then((result) => {
       if (result.error) {
-        console.log("[Session] Login da conta de teste falhou:", result.error);
+        console.log("[Session] Login da conta de teste falhou, entrando como visitante (Pro):", result.error);
+        setDevFallbackGuest(makeDevGuest());
         return;
       }
       void queryClient.invalidateQueries({ queryKey: ["supabase-session"] });
@@ -114,15 +135,19 @@ export const [SessionProvider, useSession] = createContextHook(() => {
   }, [queryClient]);
 
   const user = useMemo<TiboxUser | null>(
-    () => mapUser(sessionQuery.data ?? null),
-    [sessionQuery.data],
+    () => mapUser(sessionQuery.data ?? null) ?? devFallbackGuest,
+    [sessionQuery.data, devFallbackGuest],
   );
 
-  const isAuthenticated = !!user;
+  const isAuthenticated = !!user && !user.isGuest;
   // Keep the "loading" state while the silent dev login might still be in
   // flight, so the UI doesn't flash a sign-in screen before that resolves.
   const awaitingDevLogin =
-    DEV_AUTO_LOGIN && !sessionQuery.isLoading && !sessionQuery.data && !devLoginAttempted;
+    DEV_AUTO_LOGIN &&
+    !sessionQuery.isLoading &&
+    !sessionQuery.data &&
+    !devLoginAttempted &&
+    !devFallbackGuest;
   const isHydrated = !sessionQuery.isLoading && !awaitingDevLogin;
 
   const signIn = useCallback(
