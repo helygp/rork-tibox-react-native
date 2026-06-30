@@ -1,6 +1,7 @@
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { Gift, Sparkles, TrendingUp, Users } from "lucide-react-native";
+import { Gift, Plus, Sparkles, TrendingUp, Users } from "lucide-react-native";
 import React, { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
@@ -99,6 +100,9 @@ export default function HomeScreen() {
   const { gifts, isLoading } = useGiftStore();
 
   const handleCreate = useCallback(() => {
+    if (Platform.OS !== "web") {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     router.push("/create");
   }, [router]);
 
@@ -173,13 +177,33 @@ export default function HomeScreen() {
             keyExtractor={keyExtractor}
             contentContainerStyle={[
               styles.list,
-              { paddingBottom: insets.bottom + Platform.OS === "ios" ? 100 : 80 },
+              { paddingBottom: insets.bottom + (Platform.OS === "ios" ? 120 : 100) },
             ]}
             showsVerticalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
         )}
       </View>
+
+      {/* Floating create button — always available */}
+      {!isLoading && gifts.length > 0 && (
+        <Animated.View
+          entering={FadeInDown.delay(200).springify()}
+          style={[styles.fabWrap, { bottom: insets.bottom + (Platform.OS === "ios" ? 96 : 76) }]}
+          pointerEvents="box-none"
+        >
+          <Pressable
+            onPress={handleCreate}
+            testID="home-create-gift"
+            style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+          >
+            <LinearGradient colors={Gradients.brand} style={styles.fabGradient}>
+              <Plus size={22} color={Colors.white} strokeWidth={2.8} />
+              <Text style={styles.fabLabel}>Novo presente</Text>
+            </LinearGradient>
+          </Pressable>
+        </Animated.View>
+      )}
     </Screen>
   );
 }
@@ -326,5 +350,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: "center",
     lineHeight: 22,
+  },
+  fabWrap: {
+    position: "absolute",
+    right: 20,
+    alignItems: "flex-end",
+  },
+  fab: {
+    borderRadius: 999,
+    shadowColor: Colors.rose,
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  fabPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.96 }],
+  },
+  fabGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 999,
+  },
+  fabLabel: {
+    color: Colors.white,
+    fontSize: 15,
+    fontWeight: "800",
   },
 });
