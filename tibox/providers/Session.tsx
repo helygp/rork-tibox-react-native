@@ -23,6 +23,20 @@ export interface TiboxUser {
   isGuest: boolean;
 }
 
+/**
+ * Modo de validação: entra direto numa conta única de teste, sem login.
+ * Coloque DEV_AUTO_LOGIN = false quando for trabalhar no fluxo de login real.
+ */
+const DEV_AUTO_LOGIN = true;
+
+const DEV_USER: TiboxUser = {
+  id: "dev-tibox-account",
+  name: "Conta de Teste",
+  email: "teste@tibox.app",
+  plan: "free",
+  isGuest: false,
+};
+
 function mapUser(session: Session | null): TiboxUser | null {
   const u: User | undefined = session?.user;
   if (!u) return null;
@@ -77,10 +91,12 @@ export const [SessionProvider, useSession] = createContextHook(() => {
     return () => sub.remove();
   }, [queryClient]);
 
-  const user = useMemo<TiboxUser | null>(
-    () => mapUser(sessionQuery.data ?? null),
-    [sessionQuery.data],
-  );
+  const user = useMemo<TiboxUser | null>(() => {
+    const real = mapUser(sessionQuery.data ?? null);
+    if (real) return real;
+    if (DEV_AUTO_LOGIN) return DEV_USER;
+    return null;
+  }, [sessionQuery.data]);
 
   const isAuthenticated = !!user;
   const isHydrated = !sessionQuery.isLoading;
