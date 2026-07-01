@@ -30,7 +30,7 @@ export default function GiftCard({ gift, onPress }: Props) {
     [C],
   );
 
-  const statusMeta = meta[gift.status];
+  const statusMeta = meta[gift.status] ?? { label: "Rascunho", color: C.textMuted };
 
   const styles = useMemo(
     () =>
