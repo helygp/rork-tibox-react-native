@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  ApiError,
   createGift,
   deleteGift,
   getGenerationStatus,
@@ -99,12 +100,18 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // Merge server gifts (source of truth) with any local-only gifts that have
+  // not yet appeared in the server list (freshly created, offline drafts).
+  // This prevents a just-created gift from vanishing — which is what caused
+  // the "Presente não encontrado" screen right after creation.
   const gifts: Gift[] = useMemo(() => {
-    if (giftsQuery.data && giftsQuery.data.length > 0) return giftsQuery.data;
-    if (isOffline) return localGifts;
-    if (!giftsQuery.isFetched && localGifts.length > 0) return localGifts;
-    return giftsQuery.data ?? localGifts;
-  }, [giftsQuery.data, giftsQuery.isFetched, isOffline, localGifts]);
+    const serverGifts = giftsQuery.data ?? [];
+    const serverIds = new Set(serverGifts.map((g) => g.id));
+    const localOnly = localGifts.filter((g) => !serverIds.has(g.id));
+    const merged = [...localOnly, ...serverGifts];
+    merged.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+    return merged;
+  }, [giftsQuery.data, localGifts]);
 
   /* ── Draft helpers ── */
 
@@ -200,10 +207,16 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
       await queryClient.invalidateQueries({ queryKey: ["gifts"] });
       return gift;
     } catch (err) {
-      console.log("[GiftStore] API create failed, using local fallback.", err);
-      // Fallback: local-only gift. It never reached the server, so it has no
-      // real ID or clip yet — it can't be considered "ready", only a draft
-      // that keeps the locally generated publicId until it syncs for real.
+      // A server/business error (e.g. PLAN_LIMIT, validation) means the gift
+      // was genuinely rejected — surface it so the UI can react (show the
+      // plan-limit message, route to upgrade, etc.). Do NOT create a silent
+      // ghost draft that would then show up as "not found".
+      if (err instanceof ApiError) {
+        console.log("[GiftStore] API rejected gift creation:", err.message);
+        throw err;
+      }
+      // Only a genuine connectivity failure falls back to a local draft.
+      console.log("[GiftStore] network error, using local draft fallback.", err);
       const gift: Gift = {
         ...giftPayload,
         status: "draft",

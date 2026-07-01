@@ -473,8 +473,27 @@ function ReviewStep({ onBack }: { onBack: () => void }) {
 
   const handleFinalize = useCallback(async () => {
     setFinalizing(true);
-    try { const gift = await finalizeGift(); resetDraft(); setFinalizing(false); if (gift) router.replace(`/gift/${gift.id}`); }
-    catch { setFinalizing(false); Alert.alert("Erro", "Não foi possível criar o presente. Tente novamente."); }
+    try {
+      const gift = await finalizeGift();
+      resetDraft();
+      setFinalizing(false);
+      if (gift) router.replace(`/gift/${gift.id}`);
+    } catch (e) {
+      setFinalizing(false);
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.includes("PLAN_LIMIT")) {
+        Alert.alert(
+          "Limite do plano Free",
+          "Seu plano Free permite 1 presente por mês. Faça upgrade para o Pro para criar presentes ilimitados.",
+          [
+            { text: "Agora não", style: "cancel" },
+            { text: "Ver planos", onPress: () => router.push("/upgrade") },
+          ],
+        );
+      } else {
+        Alert.alert("Erro", msg || "Não foi possível criar o presente. Tente novamente.");
+      }
+    }
   }, [finalizeGift, resetDraft, router]);
 
   const styles = useMemo(() => StyleSheet.create({
