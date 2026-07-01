@@ -416,9 +416,9 @@ function DeliveryStep({ onNext, onBack }: { onNext: () => void; onBack: () => vo
     switchThumbOn: { alignSelf: "flex-end" as const },
     codePreview: { backgroundColor: C.inkCard, borderRadius: 16, padding: 20, alignItems: "center" as const, borderWidth: 1, borderColor: C.border, marginBottom: 20 },
     codePreviewLabel: { color: C.textMuted, fontSize: 12, fontWeight: "700" as const, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 12 },
-    codeInputRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 10 },
-    codeInput: { backgroundColor: C.inkCardSoft, borderWidth: 1.5, borderColor: C.border, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 16, color: C.gold, fontSize: 32, fontWeight: "800" as const, letterSpacing: 10, textAlign: "center" as const, minWidth: 170 },
-    codeSuggest: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, backgroundColor: "rgba(143,209,79,0.12)", borderWidth: 1, borderColor: C.rose },
+    codeInputRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 10, alignSelf: "stretch" as const },
+    codeInput: { flex: 1, backgroundColor: C.inkCardSoft, borderWidth: 1.5, borderColor: C.border, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 12, color: C.gold, fontSize: 26, fontWeight: "800" as const, letterSpacing: 6, textAlign: "center" as const },
+    codeSuggest: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "center" as const, gap: 6, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12, backgroundColor: "rgba(143,209,79,0.12)", borderWidth: 1, borderColor: C.rose },
     codeSuggestText: { color: C.rose, fontSize: 13, fontWeight: "700" as const },
     codePreviewHint: { color: C.textMuted, fontSize: 12, textAlign: "center" as const },
   }), [C]);
