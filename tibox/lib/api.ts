@@ -33,9 +33,6 @@ async function apiFetch<T>(
   };
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
-  } else {
-    // Dev fallback: usa token fixo quando Supabase auth não está disponível
-    headers["Authorization"] = `Bearer dev-tibox-api-secret-2024`;
   }
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
   if (!res.ok) {

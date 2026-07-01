@@ -2,7 +2,7 @@ import createContextHook from "@nkzw/create-context-hook";
 import { Session, User } from "@supabase/supabase-js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import {
   getAccessToken,
@@ -25,45 +25,18 @@ export interface TiboxUser {
   isGuest: boolean;
 }
 
-/**
- * Modo de validação: entra automaticamente sem pedir login, pra validar as
- * jornadas sem fricção. Desligado — a jornada real de login (e-mail/senha,
- * Google/Apple, cadastro) é agora o fluxo principal do app. Só religue pra
- * testes rápidos sem depender de credenciais reais.
- */
-const DEV_AUTO_LOGIN = false;
 
-const DEV_ACCOUNT_EMAIL = process.env.EXPO_PUBLIC_TEST_ACCOUNT_EMAIL as string | undefined;
-const DEV_ACCOUNT_PASSWORD = process.env.EXPO_PUBLIC_TEST_ACCOUNT_PASSWORD as string | undefined;
 
 function mapUser(session: Session | null): TiboxUser | null {
   const u: User | undefined = session?.user;
   if (!u) return null;
-  const isDevAccount = DEV_AUTO_LOGIN && !!DEV_ACCOUNT_EMAIL && u.email === DEV_ACCOUNT_EMAIL;
   return {
     id: u.id,
     name: u.user_metadata?.full_name ?? u.email?.split("@")[0] ?? "Você",
     email: u.email ?? "",
     avatarUrl: u.user_metadata?.avatar_url ?? undefined,
-    // A conta de teste fixa sempre aparece como Pro para liberar todas as telas durante a validação.
-    plan: isDevAccount ? "pro" : (u.app_metadata?.plan as "free" | "pro") ?? "free",
+    plan: (u.app_metadata?.plan as "free" | "pro") ?? "free",
     isGuest: false,
-  };
-}
-
-/**
- * Local fallback used while the fixed test account isn't authenticated for
- * real yet (missing credentials or login failure). Keeps the "always
- * logged in, Pro unlocked" dev experience so journeys never get stuck on the
- * sign-in screen, even though API calls won't carry a real JWT in this case.
- */
-function makeDevGuest(): TiboxUser {
-  return {
-    id: "dev-guest",
-    name: "Conta de Teste",
-    email: "",
-    plan: "pro",
-    isGuest: true,
   };
 }
 
@@ -87,41 +60,6 @@ export const [SessionProvider, useSession] = createContextHook(() => {
     return () => sub.subscription.unsubscribe();
   }, [queryClient]);
 
-  // Silently sign in with the fixed test account once we know there's no
-  // real session yet, so API calls carry a genuine Supabase JWT while still
-  // keeping the "always logged in" dev experience.
-  // - If real credentials (EXPO_PUBLIC_TEST_ACCOUNT_EMAIL/PASSWORD) are
-  //   configured, we WAIT for that real login to finish before releasing the
-  //   flow — we never drop to the local guest fallback in this case, since
-  //   the app is meant to be talking to the real backend.
-  // - Only when those credentials are missing do we fall back immediately to
-  //   a local guest session, so journeys still don't get stuck on sign-in.
-  const [devLoginStatus, setDevLoginStatus] = useState<"idle" | "pending" | "resolved">("idle");
-  const [devFallbackGuest, setDevFallbackGuest] = useState<TiboxUser | null>(null);
-  useEffect(() => {
-    if (!DEV_AUTO_LOGIN || sessionQuery.isLoading || devLoginStatus !== "idle" || sessionQuery.data) {
-      return;
-    }
-    if (!DEV_ACCOUNT_EMAIL || !DEV_ACCOUNT_PASSWORD) {
-      console.log("[Session] DEV_AUTO_LOGIN ligado mas faltam EXPO_PUBLIC_TEST_ACCOUNT_EMAIL/PASSWORD — entrando como visitante (Pro) pra não travar o teste das jornadas.");
-      setDevFallbackGuest(makeDevGuest());
-      setDevLoginStatus("resolved");
-      return;
-    }
-    setDevLoginStatus("pending");
-    void signInWithPassword(DEV_ACCOUNT_EMAIL, DEV_ACCOUNT_PASSWORD).then(async (result) => {
-      if (result.error) {
-        // Real credentials are configured but the login failed — surface the
-        // real sign-in flow instead of masking it with a local guest.
-        console.log("[Session] Login da conta de teste falhou:", result.error);
-        setDevLoginStatus("resolved");
-        return;
-      }
-      await queryClient.invalidateQueries({ queryKey: ["supabase-session"] });
-      setDevLoginStatus("resolved");
-    });
-  }, [sessionQuery.isLoading, sessionQuery.data, devLoginStatus, queryClient]);
-
   // Capture auth tokens when a magic-link / OAuth deep link opens the app.
   useEffect(() => {
     const handleUrl = async (url: string | null) => {
@@ -144,20 +82,12 @@ export const [SessionProvider, useSession] = createContextHook(() => {
   }, [queryClient]);
 
   const user = useMemo<TiboxUser | null>(
-    () => mapUser(sessionQuery.data ?? null) ?? devFallbackGuest,
-    [sessionQuery.data, devFallbackGuest],
+    () => mapUser(sessionQuery.data ?? null),
+    [sessionQuery.data],
   );
 
   const isAuthenticated = !!user && !user.isGuest;
-  // Keep the "loading" state while the silent dev login is still idle or in
-  // flight, so the UI never flashes a sign-in screen (or unlocks the app)
-  // before the real login attempt has resolved one way or another.
-  const awaitingDevLogin =
-    DEV_AUTO_LOGIN &&
-    !sessionQuery.isLoading &&
-    !sessionQuery.data &&
-    (devLoginStatus === "idle" || devLoginStatus === "pending");
-  const isHydrated = !sessionQuery.isLoading && !awaitingDevLogin;
+  const isHydrated = !sessionQuery.isLoading;
 
   const signIn = useCallback(
     async (

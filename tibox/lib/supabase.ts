@@ -6,8 +6,9 @@ import * as WebBrowser from "expo-web-browser";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
 
+console.log("[Supabase] URL:", supabaseUrl || "(using hardcoded fallback)");
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("[Supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY — auth will use mock fallback.");
+  console.warn("[Supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY — auth will use fallback.");
 }
 
 const redirectUrl = Linking.createURL("/auth/callback");
@@ -88,17 +89,22 @@ export async function signUpWithPassword(
   }
 }
 
-/** Sign in with email + password (used for the fixed test account). */
+/** Sign in with email + password. */
 export async function signInWithPassword(
   email: string,
   password: string,
 ): Promise<{ error?: string }> {
   try {
+    console.log("[Supabase] signInWithPassword — URL:", supabaseUrl, "email:", email);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
+    if (error) {
+      console.error("[Supabase] signInWithPassword error:", error.message, "status:", error.status);
+      return { error: error.message };
+    }
     return {};
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Erro desconhecido.";
+    console.error("[Supabase] signInWithPassword exception:", message);
     return { error: message };
   }
 }
