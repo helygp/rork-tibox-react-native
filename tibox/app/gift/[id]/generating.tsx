@@ -59,6 +59,16 @@ export default function GeneratingScreen() {
   // Polling automático: o backend gera o clipe de forma assíncrona. Enquanto
   // isso, mostramos o loader; quando ficar pronto (ou agendado) navegamos
   // sozinhos para a tela de entrega.
+  // Rede de segurança: se o presente já está pronto localmente (ex.: "Meu
+  // Próprio Vídeo", que não passa por geração por IA), vai direto para a
+  // tela de entrega sem ficar preso no loader.
+  useEffect(() => {
+    if (!id || !gift) return;
+    if (gift.status === "ready" || gift.status === "scheduled" || gift.clipUri) {
+      router.replace(`/gift/${id}/ready`);
+    }
+  }, [id, gift, router]);
+
   const ensuredStartRef = useRef(false);
   useEffect(() => {
     if (!id) return;

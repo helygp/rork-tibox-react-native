@@ -634,10 +634,13 @@ function ReviewStep({ onBack }: { onBack: () => void }) {
       const gift = await finalizeGift();
       resetDraft();
       setFinalizing(false);
-      // Fluxo automático: vai direto para a tela de "gerando" (loader).
-      // O backend gera o clipe de forma assíncrona; a tela faz polling e,
-      // quando ficar pronto, navega sozinha para a tela de entrega.
-      if (gift) router.replace(`/gift/${gift.id}/generating`);
+      // Fluxo automático. Para "Meu Próprio Vídeo" (raw_video) o vídeo enviado
+      // já é o clipe final — vai direto para a tela de entrega. Os demais tipos
+      // passam pelo loader de geração, que faz polling e navega quando pronto.
+      if (gift) {
+        const alreadyDone = gift.status === "ready" || gift.status === "scheduled";
+        router.replace(alreadyDone ? `/gift/${gift.id}/ready` : `/gift/${gift.id}/generating`);
+      }
     } catch (e) {
       setFinalizing(false);
       const msg = e instanceof Error ? e.message : "";

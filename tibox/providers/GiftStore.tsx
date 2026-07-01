@@ -190,17 +190,33 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
         }
       }
 
-      // 3. Start generation. The public link must always reflect the
-      // server's own unique_slug — never the locally generated placeholder —
-      // since that's the only ID the backend (and the public page) recognizes.
-      // For raw_video, the uploaded video URL is sent to the backend as `videos`.
+      // 3. For raw_video, the user's own uploaded video IS the final clip —
+      // there's no AI generation step. So we mark it ready (or scheduled)
+      // right away and skip the generation flow entirely, which is what was
+      // leaving these gifts stuck forever on the "generating" loader.
       const uploadedVideoUrls =
         videoType === "raw_video"
           ? uploadedMedia.filter((m) => m.kind === "video").map((m) => m.uri)
           : undefined;
-      if (uploadedVideoUrls && uploadedVideoUrls.length > 0) {
-        void updateGift(created.id, { videos: uploadedVideoUrls }).catch((err) =>
-          console.log("[GiftStore] updateGift videos error", err),
+      const isRawVideo =
+        videoType === "raw_video" && !!uploadedVideoUrls && uploadedVideoUrls.length > 0;
+      const isScheduled = giftPayload.deliveryMode === "scheduled";
+
+      let finalStatus: Gift["status"] = "generating";
+      let finalClipUri: string | undefined;
+
+      if (isRawVideo) {
+        finalClipUri = uploadedVideoUrls![0];
+        finalStatus = isScheduled ? "scheduled" : "ready";
+        void updateGift(created.id, {
+          status: finalStatus,
+          clipUri: finalClipUri,
+          videos: uploadedVideoUrls,
+        }).catch((err) => console.log("[GiftStore] updateGift raw_video error", err));
+      } else {
+        // Normal flow: fire AI generation (don't block).
+        void startGeneration(created.id).catch((err) =>
+          console.log("[GiftStore] generate error", err),
         );
       }
 
@@ -208,15 +224,11 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
         ...giftPayload,
         id: created.id,
         publicId: created.publicId,
-        status: "generating",
+        status: finalStatus,
+        clipUri: finalClipUri,
         media: uploadedMedia,
         videos: uploadedVideoUrls ?? giftPayload.videos,
       };
-
-      // Fire generation (don't block).
-      void startGeneration(created.id).catch((err) =>
-        console.log("[GiftStore] generate error", err),
-      );
 
       // Invalidate and cache.
       setLocalGifts((prev) => {
