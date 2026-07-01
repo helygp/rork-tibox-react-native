@@ -1,7 +1,7 @@
 import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ApiError,
@@ -300,6 +300,69 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
   const startPolling = useCallback((id: string) => {
     setPollingIds((prev) => new Set(prev).add(id));
   }, []);
+
+  /* ── Background reconciler ──
+   * Any gift that isn't in a terminal state (still "generating" — or stuck in
+   * "draft" because the generation call never fired/succeeded) is kept in sync
+   * even when the user is on the home screen and never opens the "generating"
+   * loader. For a gift the backend still reports as "draft", we re-trigger
+   * generation once so it doesn't stay stuck as "rascunho" forever.
+   */
+  const retriedGenerationRef = useRef<Set<string>>(new Set());
+
+  const pendingGiftIds = useMemo(() => {
+    return gifts
+      .filter(
+        (g) =>
+          g.id &&
+          g.videoType !== "raw_video" &&
+          (g.status === "generating" || g.status === "draft"),
+      )
+      .map((g) => g.id)
+      .join(",");
+  }, [gifts]);
+
+  useEffect(() => {
+    if (!user || pendingGiftIds.length === 0) return;
+    const ids = pendingGiftIds.split(",").filter(Boolean);
+    if (ids.length === 0) return;
+
+    let cancelled = false;
+
+    const reconcile = async () => {
+      for (const id of ids) {
+        try {
+          const status = await getGenerationStatus(id);
+          if (cancelled) return;
+          if (status.status === "ready" || status.status === "scheduled") {
+            if (status.clipUri) markReady(id, status.clipUri);
+            else await queryClient.invalidateQueries({ queryKey: ["gifts"] });
+          } else if (status.status === "draft") {
+            // Generation never started (or failed silently). Kick it off once.
+            if (!retriedGenerationRef.current.has(id)) {
+              retriedGenerationRef.current.add(id);
+              console.log("[GiftStore] re-triggering stuck generation for", id);
+              void startGeneration(id).catch((err) =>
+                console.log("[GiftStore] re-trigger generation failed", err),
+              );
+            }
+          }
+        } catch {
+          // Ignore transient poll errors.
+        }
+      }
+    };
+
+    void reconcile();
+    const interval = setInterval(() => {
+      void reconcile();
+    }, 6000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingGiftIds, user?.id]);
 
   const markReady = useCallback(
     (id: string, clipUri: string) => {
