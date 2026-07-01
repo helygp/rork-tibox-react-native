@@ -25,12 +25,14 @@ export interface TiboxUser {
 }
 
 /**
- * Modo de validação: a conta de teste fixa loga de verdade no Supabase real
- * (sem precisar digitar e-mail/senha a cada vez), pra validar as jornadas
- * direto contra o backend. Coloque DEV_AUTO_LOGIN = false quando for
- * trabalhar no fluxo de login normal.
+ * Modo de validação: entra automaticamente sem pedir login, pra validar as
+ * jornadas sem fricção. Se a conta de teste fixa tiver credenciais reais
+ * configuradas (EXPO_PUBLIC_TEST_ACCOUNT_EMAIL/PASSWORD), ela loga de
+ * verdade no Supabase real; se não, cai automaticamente pra um visitante
+ * local (Pro) — nunca fica travado na tela de login. Coloque
+ * DEV_AUTO_LOGIN = false só quando for testar o fluxo de login manual.
  */
-const DEV_AUTO_LOGIN = false;
+const DEV_AUTO_LOGIN = true;
 
 const DEV_ACCOUNT_EMAIL = process.env.EXPO_PUBLIC_TEST_ACCOUNT_EMAIL as string | undefined;
 const DEV_ACCOUNT_PASSWORD = process.env.EXPO_PUBLIC_TEST_ACCOUNT_PASSWORD as string | undefined;
