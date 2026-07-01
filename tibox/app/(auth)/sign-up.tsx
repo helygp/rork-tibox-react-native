@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -42,7 +43,7 @@ export default function SignUpScreen() {
     () =>
       StyleSheet.create({
         flex: { flex: 1 },
-        container: { flex: 1, paddingHorizontal: 28, justifyContent: "space-between" as const },
+        container: { flexGrow: 1, paddingHorizontal: 28, justifyContent: "space-between" as const },
         hero: { alignItems: "center" as const, gap: 12, marginBottom: 8 },
         logo: { width: 72, height: 72, borderRadius: 24, alignItems: "center" as const, justifyContent: "center" as const },
         title: { color: C.textPrimary, fontSize: 28, fontWeight: "800" as const, letterSpacing: -0.5 },
@@ -104,7 +105,11 @@ export default function SignUpScreen() {
   return (
     <Screen>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
-        <View style={[styles.container, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 32 }]}>
+        <ScrollView
+          contentContainerStyle={[styles.container, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 32 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.hero}>
             <LinearGradient colors={G.brand as readonly [string, string]} style={styles.logo}>
               <Gift size={32} color={C.white} />
@@ -132,7 +137,7 @@ export default function SignUpScreen() {
               <Text style={styles.signInLinkText}>Já tem uma conta? <Text style={styles.signInLinkStrong}>Entrar</Text></Text>
             </Pressable>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
   );

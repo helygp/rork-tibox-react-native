@@ -6,6 +6,7 @@ import {
   Alert,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -70,7 +71,7 @@ export default function ProfileScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        container: { flex: 1, paddingHorizontal: 20 },
+        container: { paddingHorizontal: 20 },
         title: { color: C.textPrimary, fontSize: 28, fontWeight: "800" as const, letterSpacing: -0.5, marginBottom: 20 },
         card: { backgroundColor: C.inkCard, borderRadius: 24, padding: 24, alignItems: "center" as const, borderWidth: 1, borderColor: C.border, gap: 10, marginBottom: 28 },
         avatarBig: { width: 72, height: 72, borderRadius: 36, alignItems: "center" as const, justifyContent: "center" as const },
@@ -105,7 +106,12 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>Perfil</Text>
 
         <Animated.View entering={FadeInDown.springify()} style={styles.card}>
@@ -139,7 +145,7 @@ export default function ProfileScreen() {
         )}
 
         <SettingRow icon={<LogOut size={18} color={C.rose} />} label="Sair da conta" onPress={handleSignOut} danger />
-      </View>
+      </ScrollView>
     </Screen>
   );
 }

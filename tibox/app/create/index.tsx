@@ -63,16 +63,17 @@ const GIFT_TYPES: { key: GiftType; label: string; emoji: string; desc: string }[
 function StepIndicator({ current }: { current: number }) {
   const C = useColors();
   const styles = useMemo(() => StyleSheet.create({
-    stepsRow: { flexDirection: "row" as const, justifyContent: "center" as const, gap: 0, paddingVertical: 8 },
-    stepItem: { flexDirection: "row" as const, alignItems: "center" as const },
+    stepsRow: { flexDirection: "row" as const, justifyContent: "center" as const, alignItems: "flex-start" as const },
+    stepColumn: { alignItems: "center" as const, width: 38 },
     stepDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: C.inkCard, borderWidth: 1.5, borderColor: C.border, alignItems: "center" as const, justifyContent: "center" as const },
     stepDotDone: { backgroundColor: C.rose, borderColor: C.rose },
     stepDotActive: { backgroundColor: C.rose, borderColor: C.rose },
-    stepLabel: { position: "absolute" as const, top: 30, left: "50%" as const, transform: [{ translateX: -20 }], width: 40, textAlign: "center" as const, color: C.textMuted, fontSize: 9, fontWeight: "700" as const },
+    lineWrap: { width: 8, height: 24, alignItems: "center" as const, justifyContent: "center" as const },
+    stepLine: { width: 8, height: 1.5, backgroundColor: C.border },
+    stepLineDone: { backgroundColor: C.rose },
+    stepLabel: { color: C.textMuted, fontSize: 8, fontWeight: "700" as const, textAlign: "center" as const, marginTop: 4, width: 38 },
     stepLabelActive: { color: C.rose },
     stepLabelDone: { color: C.roseSoft },
-    stepLine: { width: 20, height: 1.5, backgroundColor: C.border, marginHorizontal: 2 },
-    stepLineDone: { backgroundColor: C.rose },
   }), [C]);
 
   return (
@@ -82,12 +83,18 @@ function StepIndicator({ current }: { current: number }) {
         const active = i === current;
         const Icon = step.icon;
         return (
-          <View key={i} style={styles.stepItem}>
-            <View style={[styles.stepDot, done && styles.stepDotDone, active && styles.stepDotActive]}>
-              {done ? <Check size={12} color={C.white} /> : <Icon size={12} color={active ? C.white : C.textMuted} />}
+          <View key={i} style={{ flexDirection: "row" as const, alignItems: "flex-start" as const }}>
+            <View style={styles.stepColumn}>
+              <View style={[styles.stepDot, done && styles.stepDotDone, active && styles.stepDotActive]}>
+                {done ? <Check size={12} color={C.white} /> : <Icon size={12} color={active ? C.white : C.textMuted} />}
+              </View>
+              <Text style={[styles.stepLabel, active && styles.stepLabelActive, done && styles.stepLabelDone]} numberOfLines={1}>{step.label}</Text>
             </View>
-            <Text style={[styles.stepLabel, active && styles.stepLabelActive, done && styles.stepLabelDone]}>{step.label}</Text>
-            {i < TOTAL_STEPS - 1 && <View style={[styles.stepLine, done && styles.stepLineDone]} />}
+            {i < TOTAL_STEPS - 1 && (
+              <View style={styles.lineWrap}>
+                <View style={[styles.stepLine, done && styles.stepLineDone]} />
+              </View>
+            )}
           </View>
         );
       })}
@@ -398,7 +405,7 @@ function DeliveryStep({ onNext, onBack }: { onNext: () => void; onBack: () => vo
     scheduleBtn: { flex: 1, flexDirection: "row" as const, alignItems: "center" as const, gap: 8, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, backgroundColor: "rgba(199,178,206,0.08)", borderWidth: 1, borderColor: C.border },
     scheduleBtnTime: { flex: 0.6 },
     scheduleBtnPressed: { backgroundColor: "rgba(199,178,206,0.15)" },
-    scheduleBtnText: { color: C.textPrimary, fontSize: 13, fontWeight: "600" as const, textTransform: "capitalize" as const, flexShrink: 1 },
+    scheduleBtnText: { color: C.textPrimary, fontSize: 13, fontWeight: "600" as const, textTransform: "capitalize" as const, flexShrink: 1, numberOfLines: 1 as const },
     switchRow: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const, backgroundColor: C.inkCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border, marginBottom: 16 },
     switchBody: { flex: 1, gap: 2 },
     switchLabel: { color: C.textPrimary, fontSize: 15, fontWeight: "600" as const },
@@ -562,7 +569,15 @@ export default function CreateScreen() {
 
       <View style={styles.stepsWrap}><StepIndicator current={step} /></View>
 
-      <Animated.View key={step} style={styles.stepBody}>
+      <Animated.ScrollView
+        key={step}
+        entering={FadeInRight.springify()}
+        exiting={FadeOutLeft}
+        style={styles.stepBody}
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {step === 0 && <RecipientStep onNext={goNext} />}
         {step === 1 && <MessageStep onNext={goNext} onBack={goBack} />}
         {step === 2 && <MediaStep onNext={goNext} onBack={goBack} />}
@@ -570,7 +585,7 @@ export default function CreateScreen() {
         {step === 4 && <StyleStep onNext={goNext} onBack={goBack} />}
         {step === 5 && <DeliveryStep onNext={goNext} onBack={goBack} />}
         {step === 6 && <ReviewStep onBack={goBack} />}
-      </Animated.View>
+      </Animated.ScrollView>
     </View>
   );
 }

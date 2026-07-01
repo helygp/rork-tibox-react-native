@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Clock, Heart, Sparkles } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import GradientButton from "@/components/GradientButton";
@@ -63,7 +63,7 @@ export default function GeneratingScreen() {
         backBtn: { width: 44, height: 44, borderRadius: 14, alignItems: "center" as const, justifyContent: "center" as const },
         backBtnPressed: { backgroundColor: C.inkCard },
         headerTitle: { color: C.textPrimary, fontSize: 17, fontWeight: "700" as const },
-        content: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, paddingHorizontal: 32, gap: 16 },
+        content: { flexGrow: 1, alignItems: "center" as const, justifyContent: "center" as const, paddingHorizontal: 32, gap: 16, paddingTop: 20 },
         iconArea: { alignItems: "center" as const, justifyContent: "center" as const, width: 160, height: 160, marginBottom: 8 },
         iconCore: { width: 88, height: 88, borderRadius: 32, alignItems: "center" as const, justifyContent: "center" as const },
         title: { color: C.textPrimary, fontSize: 24, fontWeight: "800" as const, textAlign: "center" as const, letterSpacing: -0.5 },
@@ -73,7 +73,7 @@ export default function GeneratingScreen() {
         messageBox: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, paddingHorizontal: 4 },
         tipCard: { flexDirection: "row" as const, gap: 12, backgroundColor: C.inkCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border, marginTop: 16, alignItems: "flex-start" as const },
         tipText: { color: C.textSecondary, fontSize: 13, lineHeight: 20, flex: 1 },
-        bottom: { paddingHorizontal: 24, gap: 12 },
+        bottom: { paddingHorizontal: 24, gap: 12, marginTop: 24, width: "100%" as const },
       }),
     [C],
   );
@@ -90,7 +90,11 @@ export default function GeneratingScreen() {
         <View style={styles.backBtn} />
       </View>
 
-      <View style={styles.content}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.iconArea}>
           <PulseRing delayMs={0} />
           <PulseRing delayMs={600} />
@@ -116,11 +120,10 @@ export default function GeneratingScreen() {
           <Heart size={16} color={C.rose} />
           <Text style={styles.tipText}>Enquanto isso, que tal enviar uma mensagem no WhatsApp avisando que um presente especial está chegando?</Text>
         </View>
-      </View>
-
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + 20 }]}>
-        <GradientButton label="Voltar para o início" onPress={handleBack} variant="ghost" icon={<ArrowLeft size={18} color={C.textPrimary} />} />
-      </View>
+        <View style={[styles.bottom, { paddingBottom: insets.bottom + 20 }]}>
+          <GradientButton label="Voltar para o início" onPress={handleBack} variant="ghost" icon={<ArrowLeft size={18} color={C.textPrimary} />} />
+        </View>
+      </ScrollView>
     </View>
   );
 }

@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -93,7 +94,7 @@ export default function SignInScreen() {
     () =>
       StyleSheet.create({
         flex: { flex: 1 },
-        container: { flex: 1, paddingHorizontal: 28, justifyContent: "space-between" as const },
+        container: { flexGrow: 1, paddingHorizontal: 28, justifyContent: "space-between" as const },
         hero: { alignItems: "center" as const, marginTop: 40, gap: 16 },
         brand: { color: C.textPrimary, fontSize: 40, fontWeight: "800" as const, letterSpacing: -1 },
         tagline: { color: C.textSecondary, fontSize: 16, textAlign: "center" as const, lineHeight: 24 },
@@ -150,7 +151,11 @@ export default function SignInScreen() {
   return (
     <Screen>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
-        <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 32 }]}>
+        <ScrollView
+          contentContainerStyle={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 32 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.hero}>
             <PulsingLogo />
             <Text style={styles.brand}>Tibox</Text>
@@ -211,7 +216,7 @@ export default function SignInScreen() {
 
             <Text style={styles.terms}>Ao continuar, você concorda com os Termos de Uso e a Política de Privacidade do Tibox.</Text>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
   );
