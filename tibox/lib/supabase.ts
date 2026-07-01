@@ -13,9 +13,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const redirectUrl = Linking.createURL("/auth/callback");
 
 export const supabase = createClient(
-  supabaseUrl || "https://placeholder.supabase.co",
-  supabaseAnonKey || "placeholder-key",
-  {
+  supabaseUrl || "https://supabase.srv885928.hstgr.cloud",
+  supabaseAnonKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjQ4NjYwMDAwMDB9.b-XgwtZRifFQstM2SKumXdusSYC5evASrmLxnSyW6SI",  {
     auth: {
       storage: undefined, // React Native uses AsyncStorage adapter by default in newer versions
       autoRefreshToken: true,
