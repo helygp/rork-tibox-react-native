@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { Gift, Plus, Sparkles, TrendingUp, Users } from "lucide-react-native";
+import { Gift, Sparkles, TrendingUp, Users } from "lucide-react-native";
 import React, { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
@@ -116,11 +116,6 @@ export default function HomeScreen() {
         giftRow: { marginBottom: 0 },
         separator: { height: 10 },
         loading: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
-        fabWrap: { position: "absolute" as const, right: 20, alignItems: "flex-end" as const },
-        fab: { borderRadius: 999, shadowColor: C.rose, shadowOpacity: 0.45, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
-        fabPressed: { opacity: 0.9, transform: [{ scale: 0.96 }] },
-        fabGradient: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 999 },
-        fabLabel: { color: C.white, fontSize: 15, fontWeight: "800" as const },
       }),
     [C],
   );
@@ -177,17 +172,6 @@ export default function HomeScreen() {
           <FlatList data={gifts} renderItem={renderGift} keyExtractor={keyExtractor} contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + (Platform.OS === "ios" ? 120 : 100) }]} showsVerticalScrollIndicator={false} ItemSeparatorComponent={() => <View style={styles.separator} />} />
         )}
       </View>
-
-      {!isLoading && gifts.length > 0 && (
-        <Animated.View entering={FadeInDown.delay(200).springify()} style={[styles.fabWrap, { bottom: insets.bottom + (Platform.OS === "ios" ? 96 : 76) }]} pointerEvents="box-none">
-          <Pressable onPress={handleCreate} testID="home-create-gift" style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}>
-            <LinearGradient colors={G.brand as readonly [string, string]} style={styles.fabGradient}>
-              <Plus size={22} color={C.white} strokeWidth={2.8} />
-              <Text style={styles.fabLabel}>Novo presente</Text>
-            </LinearGradient>
-          </Pressable>
-        </Animated.View>
-      )}
     </Screen>
   );
 }
