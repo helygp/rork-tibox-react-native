@@ -90,30 +90,38 @@ export const [SessionProvider, useSession] = createContextHook(() => {
 
   // Silently sign in with the fixed test account once we know there's no
   // real session yet, so API calls carry a genuine Supabase JWT while still
-  // keeping the "always logged in" dev experience. If real credentials aren't
-  // configured yet (or the login fails), fall back to a local guest session
-  // immediately instead of leaving the user stuck on the sign-in screen.
-  const [devLoginAttempted, setDevLoginAttempted] = useState(false);
+  // keeping the "always logged in" dev experience.
+  // - If real credentials (EXPO_PUBLIC_TEST_ACCOUNT_EMAIL/PASSWORD) are
+  //   configured, we WAIT for that real login to finish before releasing the
+  //   flow — we never drop to the local guest fallback in this case, since
+  //   the app is meant to be talking to the real backend.
+  // - Only when those credentials are missing do we fall back immediately to
+  //   a local guest session, so journeys still don't get stuck on sign-in.
+  const [devLoginStatus, setDevLoginStatus] = useState<"idle" | "pending" | "resolved">("idle");
   const [devFallbackGuest, setDevFallbackGuest] = useState<TiboxUser | null>(null);
   useEffect(() => {
-    if (!DEV_AUTO_LOGIN || sessionQuery.isLoading || devLoginAttempted || sessionQuery.data) {
+    if (!DEV_AUTO_LOGIN || sessionQuery.isLoading || devLoginStatus !== "idle" || sessionQuery.data) {
       return;
     }
-    setDevLoginAttempted(true);
     if (!DEV_ACCOUNT_EMAIL || !DEV_ACCOUNT_PASSWORD) {
       console.log("[Session] DEV_AUTO_LOGIN ligado mas faltam EXPO_PUBLIC_TEST_ACCOUNT_EMAIL/PASSWORD — entrando como visitante (Pro) pra não travar o teste das jornadas.");
       setDevFallbackGuest(makeDevGuest());
+      setDevLoginStatus("resolved");
       return;
     }
-    void signInWithPassword(DEV_ACCOUNT_EMAIL, DEV_ACCOUNT_PASSWORD).then((result) => {
+    setDevLoginStatus("pending");
+    void signInWithPassword(DEV_ACCOUNT_EMAIL, DEV_ACCOUNT_PASSWORD).then(async (result) => {
       if (result.error) {
-        console.log("[Session] Login da conta de teste falhou, entrando como visitante (Pro):", result.error);
-        setDevFallbackGuest(makeDevGuest());
+        // Real credentials are configured but the login failed — surface the
+        // real sign-in flow instead of masking it with a local guest.
+        console.log("[Session] Login da conta de teste falhou:", result.error);
+        setDevLoginStatus("resolved");
         return;
       }
-      void queryClient.invalidateQueries({ queryKey: ["supabase-session"] });
+      await queryClient.invalidateQueries({ queryKey: ["supabase-session"] });
+      setDevLoginStatus("resolved");
     });
-  }, [sessionQuery.isLoading, sessionQuery.data, devLoginAttempted, queryClient]);
+  }, [sessionQuery.isLoading, sessionQuery.data, devLoginStatus, queryClient]);
 
   // Capture auth tokens when a magic-link / OAuth deep link opens the app.
   useEffect(() => {
@@ -142,14 +150,14 @@ export const [SessionProvider, useSession] = createContextHook(() => {
   );
 
   const isAuthenticated = !!user && !user.isGuest;
-  // Keep the "loading" state while the silent dev login might still be in
-  // flight, so the UI doesn't flash a sign-in screen before that resolves.
+  // Keep the "loading" state while the silent dev login is still idle or in
+  // flight, so the UI never flashes a sign-in screen (or unlocks the app)
+  // before the real login attempt has resolved one way or another.
   const awaitingDevLogin =
     DEV_AUTO_LOGIN &&
     !sessionQuery.isLoading &&
     !sessionQuery.data &&
-    !devLoginAttempted &&
-    !devFallbackGuest;
+    (devLoginStatus === "idle" || devLoginStatus === "pending");
   const isHydrated = !sessionQuery.isLoading && !awaitingDevLogin;
 
   const signIn = useCallback(

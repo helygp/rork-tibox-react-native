@@ -175,11 +175,13 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
         }
       }
 
-      // 3. Start generation.
+      // 3. Start generation. The public link must always reflect the
+      // server's own unique_slug — never the locally generated placeholder —
+      // since that's the only ID the backend (and the public page) recognizes.
       const gift: Gift = {
         ...giftPayload,
         id: created.id,
-        publicId: created.publicId || giftPayload.publicId,
+        publicId: created.publicId,
         status: "generating",
         media: uploadedMedia,
       };
@@ -199,10 +201,12 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
       return gift;
     } catch (err) {
       console.log("[GiftStore] API create failed, using local fallback.", err);
-      // Fallback: local-only gift.
+      // Fallback: local-only gift. It never reached the server, so it has no
+      // real ID or clip yet — it can't be considered "ready", only a draft
+      // that keeps the locally generated publicId until it syncs for real.
       const gift: Gift = {
         ...giftPayload,
-        status: "ready", // Skip generation in offline mode.
+        status: "draft",
       };
       setLocalGifts((prev) => {
         const next = [gift, ...prev];
