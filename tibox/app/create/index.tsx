@@ -6,7 +6,7 @@ import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/dat
 import {
   ArrowLeft, ArrowRight, Calendar, Camera, Check, ChevronRight, Clock,
   Gift, ImagePlus, MapPin, MessageCircle, Music, Palette, Sparkles,
-  Trash2, User, X,
+  RefreshCw, Trash2, User, X,
 } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -415,8 +415,11 @@ function DeliveryStep({ onNext, onBack }: { onNext: () => void; onBack: () => vo
     switchThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: C.white, alignSelf: "flex-start" as const },
     switchThumbOn: { alignSelf: "flex-end" as const },
     codePreview: { backgroundColor: C.inkCard, borderRadius: 16, padding: 20, alignItems: "center" as const, borderWidth: 1, borderColor: C.border, marginBottom: 20 },
-    codePreviewLabel: { color: C.textMuted, fontSize: 12, fontWeight: "700" as const, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 8 },
-    codePreviewValue: { color: C.gold, fontSize: 36, fontWeight: "800" as const, letterSpacing: 8, marginBottom: 8 },
+    codePreviewLabel: { color: C.textMuted, fontSize: 12, fontWeight: "700" as const, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 12 },
+    codeInputRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginBottom: 10 },
+    codeInput: { backgroundColor: C.inkCardSoft, borderWidth: 1.5, borderColor: C.border, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 16, color: C.gold, fontSize: 32, fontWeight: "800" as const, letterSpacing: 10, textAlign: "center" as const, minWidth: 170 },
+    codeSuggest: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, backgroundColor: "rgba(143,209,79,0.12)", borderWidth: 1, borderColor: C.rose },
+    codeSuggestText: { color: C.rose, fontSize: 13, fontWeight: "700" as const },
     codePreviewHint: { color: C.textMuted, fontSize: 12, textAlign: "center" as const },
   }), [C]);
 
@@ -452,8 +455,22 @@ function DeliveryStep({ onNext, onBack }: { onNext: () => void; onBack: () => vo
         <View style={[styles.switchTrack, draft.notifyWhatsapp && styles.switchTrackOn]}><View style={[styles.switchThumb, draft.notifyWhatsapp && styles.switchThumbOn]} /></View>
       </Pressable>
       <View style={styles.codePreview}>
-        <Text style={styles.codePreviewLabel}>Senha de desbloqueio</Text><Text style={styles.codePreviewValue}>{draft.unlockCode ?? "—"}</Text>
-        <Text style={styles.codePreviewHint}>O destinatário usará este código para abrir o presente.</Text>
+        <Text style={styles.codePreviewLabel}>Senha de desbloqueio</Text>
+        <View style={styles.codeInputRow}>
+          <TextInput
+            style={styles.codeInput}
+            value={draft.unlockCode ?? ""}
+            onChangeText={(t) => updateDraft({ unlockCode: t.replace(/[^0-9]/g, "").slice(0, 4) })}
+            placeholder="0000"
+            placeholderTextColor={C.textMuted}
+            keyboardType="number-pad"
+            maxLength={4}
+          />
+          <Pressable onPress={() => updateDraft({ unlockCode: String(Math.floor(1000 + Math.random() * 9000)) })} style={styles.codeSuggest}>
+            <RefreshCw size={15} color={C.rose} /><Text style={styles.codeSuggestText}>Sugerir</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.codePreviewHint}>Digite 4 dígitos ou toque em Sugerir. O destinatário usará este código para abrir o presente.</Text>
       </View>
       <NavRow onNext={onNext} onBack={onBack} nextLabel="Revisar" />
     </Animated.View>
