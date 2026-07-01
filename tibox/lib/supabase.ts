@@ -3,19 +3,20 @@ import * as Linking from "expo-linking";
 import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
+// NOTE: EXPO_PUBLIC_SUPABASE_URL / _ANON_KEY are managed (locked) by the Rork
+// platform and always point at the old Rork-managed Supabase, where the real
+// accounts don't exist. They cannot be edited from the env panel and keep
+// regenerating the .env. So we pin the self-hosted project directly here.
+// The anon key is public by design, so this is safe to commit.
+const supabaseUrl = "https://supabase.srv885928.hstgr.cloud";
+const supabaseAnonKey =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjQ4NjYwMDAwMDB9.b-XgwtZRifFQstM2SKumXdusSYC5evASrmLxnSyW6SI";
 
-console.log("[Supabase] URL:", supabaseUrl || "(using hardcoded fallback)");
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("[Supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY — auth will use fallback.");
-}
+console.log("[Supabase] URL:", supabaseUrl);
 
 const redirectUrl = Linking.createURL("/auth/callback");
 
-export const supabase = createClient(
-  supabaseUrl || "https://supabase.srv885928.hstgr.cloud",
-  supabaseAnonKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjQ4NjYwMDAwMDB9.b-XgwtZRifFQstM2SKumXdusSYC5evASrmLxnSyW6SI",  {
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       storage: undefined, // React Native uses AsyncStorage adapter by default in newer versions
       autoRefreshToken: true,
