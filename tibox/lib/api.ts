@@ -90,6 +90,8 @@ export interface UploadRequestResponse {
   uploadUrl: string;
   token?: string;
   storagePath: string;
+  bucket?: string;
+  mediaType?: "photo" | "video";
 }
 
 export interface GenerationStartResponse {
@@ -229,10 +231,11 @@ export async function requestMediaUpload(
   fileName: string,
   mimeType: string,
   orderIndex: number,
+  mediaType: "photo" | "video",
 ): Promise<UploadRequestResponse> {
   return apiFetch<UploadRequestResponse>("/gifts/upload", {
     method: "POST",
-    body: JSON.stringify({ giftId, fileName, mimeType, orderIndex }),
+    body: JSON.stringify({ giftId, fileName, mimeType, orderIndex, mediaType }),
   });
 }
 
@@ -251,6 +254,14 @@ export async function putMediaFile(
   if (!res.ok) throw new ApiError(`Upload failed: ${res.status}`, res.status);
 }
 
+/** Infer a video mime type from the file extension (MP4/MOV/WebM). */
+function videoMimeFromName(fileName: string): string {
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  if (ext === "mov") return "video/quicktime";
+  if (ext === "webm") return "video/webm";
+  return "video/mp4";
+}
+
 /** Convenience: upload one local media file for a gift that already exists. */
 export async function uploadGiftMedia(
   giftId: string,
@@ -259,12 +270,14 @@ export async function uploadGiftMedia(
   orderIndex: number,
 ): Promise<{ id: string; uri: string; kind: "image" | "video" }> {
   const fileName = localUri.split("/").pop() ?? `media-${orderIndex}`;
-  const mimeType = kind === "image" ? "image/jpeg" : "video/mp4";
+  const mediaType: "photo" | "video" = kind === "image" ? "photo" : "video";
+  const mimeType = kind === "image" ? "image/jpeg" : videoMimeFromName(fileName);
   const { uploadUrl, token, storagePath } = await requestMediaUpload(
     giftId,
     fileName,
     mimeType,
     orderIndex,
+    mediaType,
   );
   await putMediaFile(uploadUrl, localUri, mimeType, token);
   return { id: storagePath, uri: storagePath, kind };

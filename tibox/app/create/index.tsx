@@ -51,17 +51,21 @@ const GENRES: { key: MusicGenre; label: string; emoji: string }[] = [
   { key: "instrumental", label: "Instrumental", emoji: "🎼" },
 ];
 
-const VIDEO_TYPES: { key: VideoType; label: string; emoji: string; desc: string; soon?: boolean }[] = [
-  { key: "cinematic_slideshow", label: "Slideshow Cinematográfico", emoji: "🎬", desc: "Clipe emocional com transições de cinema" },
-  { key: "living_photo", label: "Foto que Ganha Vida", emoji: "✨", desc: "Sua foto animada com movimento sutil", soon: true },
-  { key: "animated_card", label: "Cartão Animado", emoji: "💌", desc: "Cartão digital com animações", soon: true },
-  { key: "raw_video", label: "Meu Próprio Vídeo", emoji: "🎥", desc: "Envie seu próprio vídeo (até 30s)" },
-  { key: "narrated_message", label: "Recado Narrado", emoji: "🎙️", desc: "Sua mensagem com narração emocional" },
-  { key: "budget_slideshow", label: "Slideshow Simples", emoji: "📸", desc: "Slideshow econômico com suas fotos" },
+const VIDEO_TYPES: { key: VideoType; label: string; emoji: string; desc: string }[] = [
+  { key: "cinematic_slideshow", label: "Slideshow Cinematográfico", emoji: "🎬", desc: "2 a 9 fotos com movimento cinematográfico e narração" },
+  { key: "living_photo", label: "Foto que Ganha Vida", emoji: "✨", desc: "Uma única foto ganha movimento com IA" },
+  { key: "animated_card", label: "Cartão Animado", emoji: "💌", desc: "Cartão animado sem fotos, feito só com a mensagem" },
+  { key: "raw_video", label: "Meu Próprio Vídeo", emoji: "🎥", desc: "Seu vídeo com trilha, legendas e enquadramento" },
+  { key: "narrated_message", label: "Recado Narrado", emoji: "🎙️", desc: "Só a mensagem, narrada em PT-BR com imagens de banco" },
+  { key: "budget_slideshow", label: "Slideshow Simples", emoji: "📸", desc: "Slideshow com fotos, mais leve e rápido" },
 ];
 
-const PHOTO_VIDEO_TYPES: readonly VideoType[] = ["cinematic_slideshow", "budget_slideshow"];
-const NO_PHOTO_VIDEO_TYPES: readonly VideoType[] = ["narrated_message", "animated_card"];
+/** Types that use a 2–9 photo uploader. */
+const PHOTO_MULTI_TYPES: readonly VideoType[] = ["cinematic_slideshow", "budget_slideshow"];
+/** Types that use exactly one photo. */
+const PHOTO_SINGLE_TYPES: readonly VideoType[] = ["living_photo"];
+/** Types with no media — the message alone drives the video. */
+const NO_MEDIA_VIDEO_TYPES: readonly VideoType[] = ["narrated_message", "animated_card"];
 
 const GIFT_TYPES: { key: GiftType; label: string; emoji: string; desc: string }[] = [
   { key: "digital", label: "Digital", emoji: "✨", desc: "Miniclipe emocional com IA" },
@@ -163,19 +167,16 @@ function VideoTypeStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
       <View style={styles.grid}>
         {VIDEO_TYPES.map((v) => {
           const isSelected = selected === v.key;
-          const disabled = v.soon === true;
           return (
             <Pressable
               key={v.key}
-              disabled={disabled}
               onPress={() => updateDraft({ videoType: v.key })}
-              style={({ pressed }) => [styles.card, isSelected && styles.cardSelected, disabled && styles.cardDisabled, pressed && !disabled && styles.cardPressed]}
+              style={({ pressed }) => [styles.card, isSelected && styles.cardSelected, pressed && styles.cardPressed]}
             >
               <View style={[styles.emojiWrap, isSelected && styles.emojiWrapSelected]}><Text style={styles.emoji}>{v.emoji}</Text></View>
               <View style={styles.body}>
                 <View style={styles.labelRow}>
                   <Text style={[styles.label, isSelected && styles.labelSelected]}>{v.label}</Text>
-                  {v.soon && <View style={styles.soonBadge}><Text style={styles.soonText}>Em breve</Text></View>}
                 </View>
                 <Text style={styles.desc}>{v.desc}</Text>
               </View>
@@ -241,6 +242,8 @@ function RecipientStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
 function MessageStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const C = useColors();
   const { draft, updateDraft } = useGiftStore();
+  const videoType = (draft.videoType as VideoType) ?? "cinematic_slideshow";
+  const messageRequired = NO_MEDIA_VIDEO_TYPES.includes(videoType);
 
   const styles = useMemo(() => StyleSheet.create({
     stepContent: { flex: 1, paddingHorizontal: 24, paddingTop: 16 },
@@ -260,7 +263,7 @@ function MessageStep({ onNext, onBack }: { onNext: () => void; onBack: () => voi
         <TextInput style={[styles.input, styles.textArea]} placeholder="Escreva aqui sua mensagem especial..." placeholderTextColor={C.textMuted} value={draft.message ?? ""} onChangeText={(t) => updateDraft({ message: t })} multiline numberOfLines={5} textAlignVertical="top" autoFocus />
         <Text style={styles.charCount}>{(draft.message ?? "").length} caracteres</Text>
       </View>
-      <NavRow onNext={onNext} onBack={onBack} />
+      <NavRow onNext={onNext} onBack={onBack} nextDisabled={messageRequired && !draft.message?.trim()} />
     </Animated.View>
   );
 }
@@ -274,22 +277,26 @@ function MediaStep({ onNext, onBack }: { onNext: () => void; onBack: () => void 
   const media = draft.media ?? [];
   const videoType = (draft.videoType as VideoType) ?? "cinematic_slideshow";
 
-  const usesPhotos = PHOTO_VIDEO_TYPES.includes(videoType);
+  const isSingle = PHOTO_SINGLE_TYPES.includes(videoType);
+  const usesPhotos = PHOTO_MULTI_TYPES.includes(videoType) || isSingle;
   const isRawVideo = videoType === "raw_video";
-  const noPhotos = NO_PHOTO_VIDEO_TYPES.includes(videoType);
+  const noPhotos = NO_MEDIA_VIDEO_TYPES.includes(videoType);
 
+  const minPhotos = isSingle ? 1 : 2;
+  const maxPhotos = isSingle ? 1 : 9;
   const photoCount = media.filter((m) => m.kind === "image").length;
-  const photosValid = !usesPhotos || (photoCount >= 2 && photoCount <= 9);
+  const photosValid = !usesPhotos || (photoCount >= minPhotos && photoCount <= maxPhotos);
   const rawVideo = media.find((m) => m.kind === "video");
   const nextDisabled = (usesPhotos && !photosValid) || (isRawVideo && !rawVideo);
 
   const pickImage = useCallback(async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8, allowsMultipleSelection: true, selectionLimit: 9 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8, allowsMultipleSelection: !isSingle, selectionLimit: isSingle ? 1 : 9 });
     if (result.canceled || !result.assets) return;
-    const current = (draft.media ?? []).filter((m) => m.kind === "image");
     const added = result.assets.map((a) => ({ id: Math.random().toString(36).slice(2), uri: a.uri, kind: "image" as const }));
+    if (isSingle) { updateDraft({ media: added.slice(0, 1) }); return; }
+    const current = (draft.media ?? []).filter((m) => m.kind === "image");
     updateDraft({ media: [...current, ...added].slice(0, 9) });
-  }, [draft.media, updateDraft]);
+  }, [draft.media, updateDraft, isSingle]);
 
   const pickVideo = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["videos"], quality: 0.8, allowsMultipleSelection: false, videoMaxDuration: 30 });
@@ -337,7 +344,7 @@ function MediaStep({ onNext, onBack }: { onNext: () => void; onBack: () => void 
             <View style={styles.noticeIcon}><ImageOff size={20} color={C.rose} /></View>
             <View style={styles.noticeBody}>
               <Text style={styles.noticeTitle}>Sem fotos</Text>
-              <Text style={styles.noticeText}>Usaremos imagens que combinam com a sua mensagem e o estilo escolhido.</Text>
+              <Text style={styles.noticeText}>Vamos usar imagens que combinam com o clima escolhido.</Text>
             </View>
           </View>
         </>
@@ -360,8 +367,8 @@ function MediaStep({ onNext, onBack }: { onNext: () => void; onBack: () => void 
         </>
       ) : (
         <>
-          <Text style={styles.stepTitle}>Adicione suas fotos</Text>
-          <Text style={styles.stepSub}>Escolha de 2 a 9 fotos para o seu clipe.</Text>
+          <Text style={styles.stepTitle}>{isSingle ? "Adicione sua foto" : "Adicione suas fotos"}</Text>
+          <Text style={styles.stepSub}>{isSingle ? "Escolha 1 foto que vai ganhar vida com IA." : "Escolha de 2 a 9 fotos para o seu clipe."}</Text>
           <View style={styles.mediaGrid}>
             {media.filter((m) => m.kind === "image").map((m) => (
               <View key={m.id} style={styles.mediaThumb}>
@@ -369,11 +376,15 @@ function MediaStep({ onNext, onBack }: { onNext: () => void; onBack: () => void 
                 <Pressable style={styles.mediaRemove} onPress={() => removeMedia(m.id)}><X size={12} color={C.white} /></Pressable>
               </View>
             ))}
-            {photoCount < 9 && (
+            {photoCount < maxPhotos && (
               <Pressable onPress={pickImage} style={styles.mediaAdd}><ImagePlus size={28} color={C.rose} /><Text style={styles.mediaAddText}>Adicionar</Text></Pressable>
             )}
           </View>
-          <Text style={[styles.countHint, !photosValid && styles.countHintWarn]}>{photoCount}/9 fotos {photoCount < 2 ? "· adicione ao menos 2" : ""}</Text>
+          <Text style={[styles.countHint, !photosValid && styles.countHintWarn]}>
+            {isSingle
+              ? `${photoCount}/1 foto ${photoCount < 1 ? "· adicione 1 foto" : ""}`
+              : `${photoCount}/9 fotos ${photoCount < 2 ? "· adicione ao menos 2" : ""}`}
+          </Text>
         </>
       )}
       <NavRow onNext={onNext} onBack={onBack} nextDisabled={nextDisabled} />
