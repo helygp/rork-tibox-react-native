@@ -477,7 +477,10 @@ function ReviewStep({ onBack }: { onBack: () => void }) {
       const gift = await finalizeGift();
       resetDraft();
       setFinalizing(false);
-      if (gift) router.replace(`/gift/${gift.id}`);
+      // Fluxo automático: vai direto para a tela de "gerando" (loader).
+      // O backend gera o clipe de forma assíncrona; a tela faz polling e,
+      // quando ficar pronto, navega sozinha para a tela de entrega.
+      if (gift) router.replace(`/gift/${gift.id}/generating`);
     } catch (e) {
       setFinalizing(false);
       const msg = e instanceof Error ? e.message : "";

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import GradientButton from "@/components/GradientButton";
 import { useColors, useGradients } from "@/constants/colors";
+import { getGenerationStatus, startGeneration } from "@/lib/api";
 import { useGiftStore } from "@/providers/GiftStore";
 import type { Gift as GiftType } from "@/types/gift";
 
@@ -49,11 +50,47 @@ export default function GeneratingScreen() {
   const C = useColors();
   const G = useGradients();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getById } = useGiftStore();
+  const { getById, markReady } = useGiftStore();
 
   const gift = useMemo(() => (id ? getById(id) : undefined), [id, getById]);
   const recipientName = gift?.recipientName ?? "alguém especial";
   const firstName = recipientName.split(" ")[0];
+
+  // Polling automático: o backend gera o clipe de forma assíncrona. Enquanto
+  // isso, mostramos o loader; quando ficar pronto (ou agendado) navegamos
+  // sozinhos para a tela de entrega.
+  const ensuredStartRef = useRef(false);
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const status = await getGenerationStatus(id);
+        if (cancelled) return;
+        if (status.status === "ready" || status.status === "scheduled") {
+          if (status.clipUri) markReady(id, status.clipUri);
+          router.replace(`/gift/${id}/ready`);
+          return;
+        }
+        // Rede de segurança: se o backend ainda estiver em rascunho, garante
+        // que a geração foi de fato disparada (uma única vez).
+        if (status.status === "draft" && !ensuredStartRef.current) {
+          ensuredStartRef.current = true;
+          void startGeneration(id).catch(() => {});
+        }
+      } catch {
+        // Ignora erros transitórios de polling.
+      }
+    };
+
+    void poll();
+    const interval = setInterval(() => { void poll(); }, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [id, router, markReady]);
 
   const styles = useMemo(
     () =>
