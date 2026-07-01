@@ -11,6 +11,7 @@ import {
   signInWithOAuth,
   signInWithPassword,
   signOutSupabase,
+  signUpWithPassword,
   supabase,
   verifyEmailOtp,
 } from "@/lib/supabase";
@@ -26,13 +27,11 @@ export interface TiboxUser {
 
 /**
  * Modo de validação: entra automaticamente sem pedir login, pra validar as
- * jornadas sem fricção. Se a conta de teste fixa tiver credenciais reais
- * configuradas (EXPO_PUBLIC_TEST_ACCOUNT_EMAIL/PASSWORD), ela loga de
- * verdade no Supabase real; se não, cai automaticamente pra um visitante
- * local (Pro) — nunca fica travado na tela de login. Coloque
- * DEV_AUTO_LOGIN = false só quando for testar o fluxo de login manual.
+ * jornadas sem fricção. Desligado — a jornada real de login (e-mail/senha,
+ * Google/Apple, cadastro) é agora o fluxo principal do app. Só religue pra
+ * testes rápidos sem depender de credenciais reais.
  */
-const DEV_AUTO_LOGIN = true;
+const DEV_AUTO_LOGIN = false;
 
 const DEV_ACCOUNT_EMAIL = process.env.EXPO_PUBLIC_TEST_ACCOUNT_EMAIL as string | undefined;
 const DEV_ACCOUNT_PASSWORD = process.env.EXPO_PUBLIC_TEST_ACCOUNT_PASSWORD as string | undefined;
@@ -216,6 +215,23 @@ export const [SessionProvider, useSession] = createContextHook(() => {
     [queryClient],
   );
 
+  /** Create a new account with email + password (Google/Apple accounts are created automatically on first OAuth login). */
+  const signUp = useCallback(
+    async (
+      name: string,
+      email: string,
+      password: string,
+    ): Promise<{ error?: string; needsConfirmation?: boolean }> => {
+      const result = await signUpWithPassword(email, password, name);
+      if (result.error) return result;
+      if (!result.needsConfirmation) {
+        await queryClient.invalidateQueries({ queryKey: ["supabase-session"] });
+      }
+      return result;
+    },
+    [queryClient],
+  );
+
   const signOut = useCallback(async (): Promise<{ error?: string }> => {
     const result = await signOutSupabase();
     queryClient.setQueryData(["supabase-session"], null);
@@ -254,6 +270,7 @@ export const [SessionProvider, useSession] = createContextHook(() => {
       isHydrated,
       isGuest,
       signIn,
+      signUp,
       signInWithUrl,
       verifyCode,
       signOut,
@@ -261,6 +278,6 @@ export const [SessionProvider, useSession] = createContextHook(() => {
       continueAsGuest,
       upgradeToPro,
     }),
-    [user, isAuthenticated, isHydrated, isGuest, signIn, signInWithUrl, verifyCode, signOut, getToken, continueAsGuest, upgradeToPro],
+    [user, isAuthenticated, isHydrated, isGuest, signIn, signUp, signInWithUrl, verifyCode, signOut, getToken, continueAsGuest, upgradeToPro],
   );
 });

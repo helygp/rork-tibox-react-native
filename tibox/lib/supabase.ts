@@ -62,6 +62,32 @@ export async function signInWithOAuth(
   }
 }
 
+/** Create a new account with email + password. */
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  fullName?: string,
+): Promise<{ error?: string; needsConfirmation?: boolean }> {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: fullName ? { full_name: fullName } : undefined,
+        emailRedirectTo: redirectUrl,
+      },
+    });
+    if (error) return { error: error.message };
+    // If the project requires email confirmation, Supabase returns a user
+    // but no session yet — the caller should tell the user to check their inbox.
+    const needsConfirmation = !data.session;
+    return { needsConfirmation };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erro desconhecido.";
+    return { error: message };
+  }
+}
+
 /** Sign in with email + password (used for the fixed test account). */
 export async function signInWithPassword(
   email: string,

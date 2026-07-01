@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -298,6 +299,17 @@ export default function SignInScreen() {
               />
             )}
 
+            {!sent && (
+              <Pressable
+                onPress={() => router.push("/(auth)/sign-up")}
+                style={styles.signUpLink}
+              >
+                <Text style={styles.signUpLinkText}>
+                  Não tem conta? <Text style={styles.signUpLinkStrong}>Criar conta</Text>
+                </Text>
+              </Pressable>
+            )}
+
             <Text style={styles.terms}>
               Ao continuar, você concorda com os Termos de Uso e a Política de
               Privacidade do Tibox.
@@ -409,5 +421,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 8,
     paddingHorizontal: 12,
+  },
+  signUpLink: {
+    alignSelf: "center",
+    paddingVertical: 8,
+  },
+  signUpLinkText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+  },
+  signUpLinkStrong: {
+    color: Colors.rose,
+    fontWeight: "700",
   },
 });
