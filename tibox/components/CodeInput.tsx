@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef } from "react";
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
-import Colors from "@/constants/colors";
+import { useColors } from "@/constants/colors";
 
 interface Props {
   value: string;
@@ -12,6 +12,7 @@ interface Props {
 
 /** 4-digit "disc" style unlock code input. */
 export default function CodeInput({ value, onChange, length = 4, autoFocus }: Props) {
+  const C = useColors();
   const inputRef = useRef<TextInput>(null);
 
   const focus = useCallback(() => {
@@ -28,6 +29,44 @@ export default function CodeInput({ value, onChange, length = 4, autoFocus }: Pr
 
   const cells = useMemo(() => Array.from({ length }), [length]);
 
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        row: {
+          flexDirection: "row" as const,
+          gap: 14,
+          justifyContent: "center" as const,
+        },
+        cell: {
+          width: 60,
+          height: 72,
+          borderRadius: 18,
+          backgroundColor: C.inkCard,
+          borderWidth: 1.5,
+          borderColor: C.border,
+          alignItems: "center" as const,
+          justifyContent: "center" as const,
+        },
+        cellActive: {
+          borderColor: C.rose,
+          backgroundColor: C.inkCardSoft,
+        },
+        char: {
+          color: C.textPrimary,
+          fontSize: 34,
+          fontWeight: "800" as const,
+          lineHeight: 40,
+        },
+        hiddenInput: {
+          position: "absolute" as const,
+          opacity: 0,
+          width: 1,
+          height: 1,
+        },
+      }),
+    [C],
+  );
+
   return (
     <Pressable onPress={focus} style={styles.row}>
       {cells.map((_, i) => {
@@ -35,7 +74,7 @@ export default function CodeInput({ value, onChange, length = 4, autoFocus }: Pr
         const isActive = i === value.length;
         return (
           <View key={i} style={[styles.cell, (char || isActive) && styles.cellActive]}>
-            <Text style={styles.char}>{char ? "•" : ""}</Text>
+            <Text style={styles.char}>{char ? "\u2022" : ""}</Text>
           </View>
         );
       })}
@@ -54,37 +93,3 @@ export default function CodeInput({ value, onChange, length = 4, autoFocus }: Pr
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    gap: 14,
-    justifyContent: "center",
-  },
-  cell: {
-    width: 60,
-    height: 72,
-    borderRadius: 18,
-    backgroundColor: Colors.inkCard,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cellActive: {
-    borderColor: Colors.rose,
-    backgroundColor: Colors.inkCardSoft,
-  },
-  char: {
-    color: Colors.textPrimary,
-    fontSize: 34,
-    fontWeight: "800",
-    lineHeight: 40,
-  },
-  hiddenInput: {
-    position: "absolute",
-    opacity: 0,
-    width: 1,
-    height: 1,
-  },
-});

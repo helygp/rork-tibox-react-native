@@ -2,10 +2,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-import Colors from "@/constants/colors";
+import { useColors, useTheme } from "@/constants/colors";
 import { GiftStoreProvider } from "@/providers/GiftStore";
 import { SessionProvider, useSession } from "@/providers/Session";
 import { ThemeProvider } from "@/providers/Theme";
@@ -18,6 +18,8 @@ function AuthGate() {
   const { isAuthenticated, isHydrated, user } = useSession();
   const segments = useSegments();
   const router = useRouter();
+  const C = useColors();
+  const { mode } = useTheme();
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -33,31 +35,35 @@ function AuthGate() {
   }, [isAuthenticated, isHydrated, segments, router, user]);
 
   useEffect(() => {
-    if (isHydrated) {
-      void SplashScreen.hideAsync();
-    }
+    if (isHydrated) { void SplashScreen.hideAsync(); }
   }, [isHydrated]);
 
+  const screenOptions = useMemo(
+    () => ({
+      headerStyle: { backgroundColor: C.ink },
+      headerTintColor: C.textPrimary,
+      headerTitleStyle: { fontWeight: "700" as const },
+      headerShadowVisible: false,
+      contentStyle: { backgroundColor: C.ink },
+      headerBackTitle: "Voltar",
+    }),
+    [C],
+  );
+
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.ink },
-        headerTintColor: Colors.textPrimary,
-        headerTitleStyle: { fontWeight: "700" },
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: Colors.ink },
-        headerBackTitle: "Voltar",
-      }}
-    >
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="create" options={{ headerShown: false }} />
-      <Stack.Screen name="gift/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="g/[publicId]" options={{ headerShown: false }} />
-      <Stack.Screen name="gift/[id]/generating" options={{ headerShown: false }} />
-      <Stack.Screen name="gift/[id]/ready" options={{ headerShown: false }} />
-      <Stack.Screen name="upgrade" options={{ presentation: "modal", headerShown: false }} />
-    </Stack>
+    <>
+      <StatusBar style={mode === "dark" ? "light" : "dark"} />
+      <Stack screenOptions={screenOptions}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="create" options={{ headerShown: false }} />
+        <Stack.Screen name="gift/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="g/[publicId]" options={{ headerShown: false }} />
+        <Stack.Screen name="gift/[id]/generating" options={{ headerShown: false }} />
+        <Stack.Screen name="gift/[id]/ready" options={{ headerShown: false }} />
+        <Stack.Screen name="upgrade" options={{ presentation: "modal", headerShown: false }} />
+      </Stack>
+    </>
   );
 }
 
@@ -65,7 +71,6 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <StatusBar style="light" />
         <ThemeProvider>
           <SessionProvider>
             <GiftStoreProvider>

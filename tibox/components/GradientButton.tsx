@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -11,7 +11,7 @@ import {
   ViewStyle,
 } from "react-native";
 
-import Colors, { Gradients } from "@/constants/colors";
+import { useColors, useGradients } from "@/constants/colors";
 
 interface Props {
   label: string;
@@ -32,6 +32,9 @@ export default function GradientButton({
   variant = "primary",
   style,
 }: Props) {
+  const C = useColors();
+  const G = useGradients();
+
   const handlePress = useCallback(() => {
     if (disabled || loading) return;
     if (Platform.OS !== "web") {
@@ -40,10 +43,54 @@ export default function GradientButton({
     onPress();
   }, [disabled, loading, onPress]);
 
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        gradient: {
+          height: 56,
+          borderRadius: 18,
+          alignItems: "center" as const,
+          justifyContent: "center" as const,
+          paddingHorizontal: 24,
+        },
+        ghost: {
+          height: 56,
+          borderRadius: 18,
+          alignItems: "center" as const,
+          justifyContent: "center" as const,
+          paddingHorizontal: 24,
+          borderWidth: 1,
+          borderColor: C.border,
+          backgroundColor: C.inkCard,
+        },
+        content: {
+          flexDirection: "row" as const,
+          alignItems: "center" as const,
+          gap: 10,
+        },
+        label: {
+          color: C.white,
+          fontSize: 16,
+          fontWeight: "700" as const,
+        },
+        labelGhost: {
+          color: C.textPrimary,
+        },
+        pressed: {
+          opacity: 0.85,
+          transform: [{ scale: 0.98 }],
+        },
+        disabled: {
+          opacity: 0.45,
+        },
+      }),
+    [C],
+  );
+
   const inner = (
     <View style={styles.content}>
       {loading ? (
-        <ActivityIndicator color={variant === "primary" ? Colors.white : Colors.rose} />
+        <ActivityIndicator color={variant === "primary" ? C.white : C.rose} />
       ) : (
         <>
           {icon}
@@ -72,7 +119,7 @@ export default function GradientButton({
       style={({ pressed }) => [pressed && styles.pressed, disabled && styles.disabled, style]}
     >
       <LinearGradient
-        colors={Gradients.brand}
+        colors={G.brand as readonly [string, string]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
@@ -82,43 +129,3 @@ export default function GradientButton({
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  gradient: {
-    height: 56,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  ghost: {
-    height: 56,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.inkCard,
-  },
-  content: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  label: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  labelGhost: {
-    color: Colors.textPrimary,
-  },
-  pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  disabled: {
-    opacity: 0.45,
-  },
-});

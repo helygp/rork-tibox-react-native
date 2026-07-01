@@ -1,9 +1,14 @@
 /**
  * Tibox design tokens.
- * Brand identity extracted from the official prototype: a fresh, natural
- * green ("Tibox green") on a deep green-black canvas. Token names are kept
- * stable for compatibility — `rose`/`coral`/`plum` now carry the green family.
+ *
+ * Prefer the theme-aware hooks from this module:
+ *   import { useColors, useGradients } from "@/constants/colors";
+ *
+ * The static `Colors` and `Gradients` exports below are the dark-mode defaults.
+ * They remain for backward compatibility but won't react to the theme toggle.
  */
+
+export { useColors, useGradients, useTheme } from "@/providers/Theme";
 
 const palette = {
   ink: "#0C100C",
