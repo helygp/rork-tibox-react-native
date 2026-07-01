@@ -154,7 +154,7 @@ function normalizeGift(raw: Record<string, unknown>, fallback?: Partial<Gift>): 
     unlockCode: pick<string>(raw, "unlockCode", "passcode") ?? fallback?.unlockCode ?? "",
     status: (pick<string>(raw, "status") as GiftStatus) ?? fallback?.status ?? "draft",
     clipUri: pick<string>(raw, "clipUrl", "clip_url", "clipUri") ?? fallback?.clipUri,
-    publicId: pick<string>(raw, "publicId", "public_id", "slug") ?? fallback?.publicId ?? "",
+    publicId: pick<string>(raw, "publicId", "public_id", "unique_slug", "uniqueSlug", "slug") ?? fallback?.publicId ?? "",
     createdAt: pick<string>(raw, "createdAt", "created_at") ?? fallback?.createdAt ?? new Date().toISOString(),
     openedAt: pick<string>(raw, "openedAt", "opened_at") ?? fallback?.openedAt,
   };
@@ -280,7 +280,7 @@ export async function getGenerationStatus(giftId: string): Promise<GiftStatusRes
   return {
     status: (pick<string>(data, "status") as GiftStatus) ?? "generating",
     clipUri: pick<string>(data, "clipUrl", "clip_url"),
-    publicId: pick<string>(data, "slug", "publicId"),
+    publicId: pick<string>(data, "unique_slug", "uniqueSlug", "slug", "publicId"),
   };
 }
 

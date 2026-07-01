@@ -30,7 +30,7 @@ export interface TiboxUser {
  * direto contra o backend. Coloque DEV_AUTO_LOGIN = false quando for
  * trabalhar no fluxo de login normal.
  */
-const DEV_AUTO_LOGIN = true;
+const DEV_AUTO_LOGIN = false;
 
 const DEV_ACCOUNT_EMAIL = process.env.EXPO_PUBLIC_TEST_ACCOUNT_EMAIL as string | undefined;
 const DEV_ACCOUNT_PASSWORD = process.env.EXPO_PUBLIC_TEST_ACCOUNT_PASSWORD as string | undefined;
