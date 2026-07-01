@@ -56,7 +56,7 @@ function AuthGate() {
       <Stack screenOptions={screenOptions}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="create" options={{ headerShown: false }} />
+        <Stack.Screen name="create/index" options={{ headerShown: false }} />
         <Stack.Screen name="gift/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="g/[publicId]" options={{ headerShown: false }} />
         <Stack.Screen name="gift/[id]/generating" options={{ headerShown: false }} />
