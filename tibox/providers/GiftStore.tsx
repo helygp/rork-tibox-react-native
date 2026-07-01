@@ -131,6 +131,11 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
     const unlockCode = draft.unlockCode ?? generateUnlockCode();
 
     const isPhysical = PHYSICAL_GIFT_TYPES.includes(draft.type ?? "digital");
+    const videoType = draft.videoType ?? "cinematic_slideshow";
+    const videoUrls =
+      videoType === "raw_video"
+        ? media.filter((m) => m.kind === "video").map((m) => m.uri)
+        : undefined;
 
     const giftPayload: Gift = {
       id: makeId(),
@@ -141,6 +146,8 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
       message: draft.message ?? "",
       media,
       type: draft.type ?? "digital",
+      videoType,
+      videos: videoUrls,
       style: draft.style ?? "romantico",
       song: draft.song,
       genre: draft.genre,
@@ -161,6 +168,7 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
         recipientWhatsapp: giftPayload.recipientWhatsapp,
         mood: giftPayload.style,
         genre: giftPayload.genre,
+        videoType: giftPayload.videoType,
         message: giftPayload.message,
         notifyWhatsapp: giftPayload.notifyWhatsapp,
         deliveryMode: giftPayload.deliveryMode,
@@ -185,12 +193,24 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
       // 3. Start generation. The public link must always reflect the
       // server's own unique_slug — never the locally generated placeholder —
       // since that's the only ID the backend (and the public page) recognizes.
+      // For raw_video, the uploaded video URL is sent to the backend as `videos`.
+      const uploadedVideoUrls =
+        videoType === "raw_video"
+          ? uploadedMedia.filter((m) => m.kind === "video").map((m) => m.uri)
+          : undefined;
+      if (uploadedVideoUrls && uploadedVideoUrls.length > 0) {
+        void updateGift(created.id, { videos: uploadedVideoUrls }).catch((err) =>
+          console.log("[GiftStore] updateGift videos error", err),
+        );
+      }
+
       const gift: Gift = {
         ...giftPayload,
         id: created.id,
         publicId: created.publicId,
         status: "generating",
         media: uploadedMedia,
+        videos: uploadedVideoUrls ?? giftPayload.videos,
       };
 
       // Fire generation (don't block).

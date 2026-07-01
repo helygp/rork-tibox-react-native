@@ -5,8 +5,8 @@ import { useRouter } from "expo-router";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import {
   ArrowLeft, ArrowRight, Calendar, Camera, Check, ChevronRight, Clock,
-  Gift, ImagePlus, MapPin, MessageCircle, Music, Palette, Sparkles,
-  RefreshCw, Trash2, User, X,
+  Film, Gift, ImageOff, ImagePlus, MapPin, MessageCircle, Music, Palette, Sparkles,
+  RefreshCw, Trash2, User, Video, X,
 } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -19,9 +19,10 @@ import GradientButton from "@/components/GradientButton";
 import { useColors, useGradients } from "@/constants/colors";
 import { useGiftStore } from "@/providers/GiftStore";
 import { PHYSICAL_GIFT_TYPES } from "@/types/gift";
-import type { GiftStyle, GiftType, MusicGenre } from "@/types/gift";
+import type { GiftStyle, GiftType, MusicGenre, VideoType } from "@/types/gift";
 
 const STEPS = [
+  { icon: Film, label: "Vídeo" },
   { icon: User, label: "Quem" },
   { icon: MessageCircle, label: "Mensagem" },
   { icon: Camera, label: "Mídia" },
@@ -49,6 +50,18 @@ const GENRES: { key: MusicGenre; label: string; emoji: string }[] = [
   { key: "eletronica", label: "Eletrônica", emoji: "🎹" },
   { key: "instrumental", label: "Instrumental", emoji: "🎼" },
 ];
+
+const VIDEO_TYPES: { key: VideoType; label: string; emoji: string; desc: string; soon?: boolean }[] = [
+  { key: "cinematic_slideshow", label: "Slideshow Cinematográfico", emoji: "🎬", desc: "Clipe emocional com transições de cinema" },
+  { key: "living_photo", label: "Foto que Ganha Vida", emoji: "✨", desc: "Sua foto animada com movimento sutil", soon: true },
+  { key: "animated_card", label: "Cartão Animado", emoji: "💌", desc: "Cartão digital com animações", soon: true },
+  { key: "raw_video", label: "Meu Próprio Vídeo", emoji: "🎥", desc: "Envie seu próprio vídeo (até 30s)" },
+  { key: "narrated_message", label: "Recado Narrado", emoji: "🎙️", desc: "Sua mensagem com narração emocional" },
+  { key: "budget_slideshow", label: "Slideshow Simples", emoji: "📸", desc: "Slideshow econômico com suas fotos" },
+];
+
+const PHOTO_VIDEO_TYPES: readonly VideoType[] = ["cinematic_slideshow", "budget_slideshow"];
+const NO_PHOTO_VIDEO_TYPES: readonly VideoType[] = ["narrated_message", "animated_card"];
 
 const GIFT_TYPES: { key: GiftType; label: string; emoji: string; desc: string }[] = [
   { key: "digital", label: "Digital", emoji: "✨", desc: "Miniclipe emocional com IA" },
@@ -114,9 +127,71 @@ function NavRow({ onNext, onBack, nextLabel, nextDisabled }: { onNext: () => voi
   );
 }
 
-/* ── Step 1: Recipient ── */
+/* ── Step 1: Video Type ── */
 
-function RecipientStep({ onNext }: { onNext: () => void }) {
+function VideoTypeStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
+  const C = useColors();
+  const { draft, updateDraft } = useGiftStore();
+  const selected = (draft.videoType as VideoType) ?? "cinematic_slideshow";
+
+  const styles = useMemo(() => StyleSheet.create({
+    stepContent: { flex: 1, paddingHorizontal: 24, paddingTop: 16 },
+    stepTitle: { color: C.textPrimary, fontSize: 26, fontWeight: "800" as const, letterSpacing: -0.5, marginBottom: 6 },
+    stepSub: { color: C.textSecondary, fontSize: 15, lineHeight: 21, marginBottom: 28 },
+    grid: { gap: 10 },
+    card: { flexDirection: "row" as const, alignItems: "center" as const, gap: 14, backgroundColor: C.inkCard, borderRadius: 16, padding: 14, borderWidth: 1.5, borderColor: C.border },
+    cardSelected: { borderColor: C.rose, backgroundColor: "rgba(143,209,79,0.08)" },
+    cardDisabled: { opacity: 0.55 },
+    cardPressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
+    emojiWrap: { width: 48, height: 48, borderRadius: 14, backgroundColor: C.inkCardSoft, alignItems: "center" as const, justifyContent: "center" as const },
+    emojiWrapSelected: { backgroundColor: "rgba(143,209,79,0.15)" },
+    emoji: { fontSize: 24 },
+    body: { flex: 1, gap: 2 },
+    labelRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, flexWrap: "wrap" as const },
+    label: { color: C.textPrimary, fontSize: 15, fontWeight: "700" as const },
+    labelSelected: { color: C.rose },
+    desc: { color: C.textMuted, fontSize: 12 },
+    soonBadge: { backgroundColor: C.inkCardSoft, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
+    soonText: { color: C.gold, fontSize: 10, fontWeight: "800" as const, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+    check: { width: 24, height: 24, borderRadius: 12, backgroundColor: C.rose, alignItems: "center" as const, justifyContent: "center" as const },
+  }), [C]);
+
+  return (
+    <Animated.View entering={FadeInRight.springify()} exiting={FadeOutLeft} style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Que tipo de vídeo?</Text>
+      <Text style={styles.stepSub}>Escolha como o seu presente ganhará vida.</Text>
+      <View style={styles.grid}>
+        {VIDEO_TYPES.map((v) => {
+          const isSelected = selected === v.key;
+          const disabled = v.soon === true;
+          return (
+            <Pressable
+              key={v.key}
+              disabled={disabled}
+              onPress={() => updateDraft({ videoType: v.key })}
+              style={({ pressed }) => [styles.card, isSelected && styles.cardSelected, disabled && styles.cardDisabled, pressed && !disabled && styles.cardPressed]}
+            >
+              <View style={[styles.emojiWrap, isSelected && styles.emojiWrapSelected]}><Text style={styles.emoji}>{v.emoji}</Text></View>
+              <View style={styles.body}>
+                <View style={styles.labelRow}>
+                  <Text style={[styles.label, isSelected && styles.labelSelected]}>{v.label}</Text>
+                  {v.soon && <View style={styles.soonBadge}><Text style={styles.soonText}>Em breve</Text></View>}
+                </View>
+                <Text style={styles.desc}>{v.desc}</Text>
+              </View>
+              {isSelected && <View style={styles.check}><Check size={12} color={C.white} /></View>}
+            </Pressable>
+          );
+        })}
+      </View>
+      <NavRow onNext={onNext} onBack={onBack} />
+    </Animated.View>
+  );
+}
+
+/* ── Step 2: Recipient ── */
+
+function RecipientStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const C = useColors();
   const { draft, updateDraft } = useGiftStore();
 
@@ -156,12 +231,12 @@ function RecipientStep({ onNext }: { onNext: () => void }) {
           })}
         </View>
       </View>
-      <GradientButton label="Continuar" onPress={onNext} icon={<ArrowRight size={18} color={C.white} />} disabled={!draft.recipientName?.trim()} style={styles.nextBtn} />
+      <NavRow onNext={onNext} onBack={onBack} nextDisabled={!draft.recipientName?.trim()} />
     </Animated.View>
   );
 }
 
-/* ── Step 2: Message ── */
+/* ── Step 3: Message ── */
 
 function MessageStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const C = useColors();
@@ -190,21 +265,42 @@ function MessageStep({ onNext, onBack }: { onNext: () => void; onBack: () => voi
   );
 }
 
-/* ── Step 3: Media ── */
+/* ── Step 4: Media ── */
 
 function MediaStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const C = useColors();
   const G = useGradients();
   const { draft, updateDraft } = useGiftStore();
   const media = draft.media ?? [];
+  const videoType = (draft.videoType as VideoType) ?? "cinematic_slideshow";
+
+  const usesPhotos = PHOTO_VIDEO_TYPES.includes(videoType);
+  const isRawVideo = videoType === "raw_video";
+  const noPhotos = NO_PHOTO_VIDEO_TYPES.includes(videoType);
+
+  const photoCount = media.filter((m) => m.kind === "image").length;
+  const photosValid = !usesPhotos || (photoCount >= 2 && photoCount <= 9);
+  const rawVideo = media.find((m) => m.kind === "video");
+  const nextDisabled = (usesPhotos && !photosValid) || (isRawVideo && !rawVideo);
 
   const pickImage = useCallback(async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], quality: 0.8, allowsMultipleSelection: true, selectionLimit: 10 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8, allowsMultipleSelection: true, selectionLimit: 9 });
     if (result.canceled || !result.assets) return;
-    const current = draft.media ?? [];
-    const added = result.assets.map((a) => ({ id: Math.random().toString(36).slice(2), uri: a.uri, kind: a.type === "video" ? "video" as const : "image" as const }));
-    updateDraft({ media: [...current, ...added] });
+    const current = (draft.media ?? []).filter((m) => m.kind === "image");
+    const added = result.assets.map((a) => ({ id: Math.random().toString(36).slice(2), uri: a.uri, kind: "image" as const }));
+    updateDraft({ media: [...current, ...added].slice(0, 9) });
   }, [draft.media, updateDraft]);
+
+  const pickVideo = useCallback(async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["videos"], quality: 0.8, allowsMultipleSelection: false, videoMaxDuration: 30 });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    if (typeof asset.duration === "number" && asset.duration > 31) {
+      Alert.alert("Vídeo muito longo", "Escolha um vídeo de até 30 segundos.");
+      return;
+    }
+    updateDraft({ media: [{ id: Math.random().toString(36).slice(2), uri: asset.uri, kind: "video" as const }] });
+  }, [updateDraft]);
 
   const removeMedia = useCallback((id: string) => { updateDraft({ media: media.filter((m) => m.id !== id) }); }, [media, updateDraft]);
 
@@ -218,22 +314,69 @@ function MediaStep({ onNext, onBack }: { onNext: () => void; onBack: () => void 
     mediaRemove: { position: "absolute" as const, top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center" as const, justifyContent: "center" as const },
     mediaAdd: { width: 92, height: 92, borderRadius: 14, borderWidth: 2, borderColor: C.border, borderStyle: "dashed" as const, alignItems: "center" as const, justifyContent: "center" as const, gap: 4 },
     mediaAddText: { color: C.rose, fontSize: 11, fontWeight: "600" as const },
+    countHint: { color: C.textMuted, fontSize: 12, marginTop: 12, marginLeft: 4 },
+    countHintWarn: { color: C.gold },
+    noticeCard: { flexDirection: "row" as const, gap: 14, alignItems: "center" as const, backgroundColor: C.inkCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border },
+    noticeIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: "rgba(143,209,79,0.12)", alignItems: "center" as const, justifyContent: "center" as const },
+    noticeBody: { flex: 1, gap: 2 },
+    noticeTitle: { color: C.textPrimary, fontSize: 15, fontWeight: "700" as const },
+    noticeText: { color: C.textMuted, fontSize: 13, lineHeight: 18 },
+    videoTile: { width: "100%" as const, height: 200, borderRadius: 18, overflow: "hidden" as const, backgroundColor: C.inkCard },
+    videoAdd: { width: "100%" as const, height: 200, borderRadius: 18, borderWidth: 2, borderColor: C.border, borderStyle: "dashed" as const, alignItems: "center" as const, justifyContent: "center" as const, gap: 8 },
+    videoAddText: { color: C.rose, fontSize: 14, fontWeight: "700" as const },
+    videoAddHint: { color: C.textMuted, fontSize: 12 },
   }), [C]);
 
   return (
     <Animated.View entering={FadeInRight.springify()} exiting={FadeOutLeft} style={styles.stepContent}>
-      <Text style={styles.stepTitle}>Adicione fotos e vídeos</Text>
-      <Text style={styles.stepSub}>Essas mídias serão usadas no miniclipe emocional.</Text>
-      <View style={styles.mediaGrid}>
-        {media.map((m) => (
-          <View key={m.id} style={styles.mediaThumb}>
-            {m.kind === "image" ? <Image source={{ uri: m.uri }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <LinearGradient colors={G.brandDeep as readonly [string, string]} style={StyleSheet.absoluteFill}><Text style={styles.mediaVideoLabel}>🎬</Text></LinearGradient>}
-            <Pressable style={styles.mediaRemove} onPress={() => removeMedia(m.id)}><X size={12} color={C.white} /></Pressable>
+      {noPhotos ? (
+        <>
+          <Text style={styles.stepTitle}>Sem fotos necessárias</Text>
+          <Text style={styles.stepSub}>Este formato não usa suas fotos.</Text>
+          <View style={styles.noticeCard}>
+            <View style={styles.noticeIcon}><ImageOff size={20} color={C.rose} /></View>
+            <View style={styles.noticeBody}>
+              <Text style={styles.noticeTitle}>Sem fotos</Text>
+              <Text style={styles.noticeText}>Usaremos imagens que combinam com a sua mensagem e o estilo escolhido.</Text>
+            </View>
           </View>
-        ))}
-        <Pressable onPress={pickImage} style={styles.mediaAdd}><ImagePlus size={28} color={C.rose} /><Text style={styles.mediaAddText}>Adicionar</Text></Pressable>
-      </View>
-      <NavRow onNext={onNext} onBack={onBack} />
+        </>
+      ) : isRawVideo ? (
+        <>
+          <Text style={styles.stepTitle}>Envie seu vídeo</Text>
+          <Text style={styles.stepSub}>Um vídeo de até 30 segundos (MP4 ou MOV).</Text>
+          {rawVideo ? (
+            <View style={styles.videoTile}>
+              <LinearGradient colors={G.brandDeep as readonly [string, string]} style={StyleSheet.absoluteFill}><Text style={[styles.mediaVideoLabel, { lineHeight: 200 }]}>🎥</Text></LinearGradient>
+              <Pressable style={styles.mediaRemove} onPress={() => removeMedia(rawVideo.id)}><X size={12} color={C.white} /></Pressable>
+            </View>
+          ) : (
+            <Pressable onPress={pickVideo} style={styles.videoAdd}>
+              <Video size={32} color={C.rose} />
+              <Text style={styles.videoAddText}>Selecionar vídeo</Text>
+              <Text style={styles.videoAddHint}>Máx. 30s · MP4/MOV</Text>
+            </Pressable>
+          )}
+        </>
+      ) : (
+        <>
+          <Text style={styles.stepTitle}>Adicione suas fotos</Text>
+          <Text style={styles.stepSub}>Escolha de 2 a 9 fotos para o seu clipe.</Text>
+          <View style={styles.mediaGrid}>
+            {media.filter((m) => m.kind === "image").map((m) => (
+              <View key={m.id} style={styles.mediaThumb}>
+                <Image source={{ uri: m.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                <Pressable style={styles.mediaRemove} onPress={() => removeMedia(m.id)}><X size={12} color={C.white} /></Pressable>
+              </View>
+            ))}
+            {photoCount < 9 && (
+              <Pressable onPress={pickImage} style={styles.mediaAdd}><ImagePlus size={28} color={C.rose} /><Text style={styles.mediaAddText}>Adicionar</Text></Pressable>
+            )}
+          </View>
+          <Text style={[styles.countHint, !photosValid && styles.countHintWarn]}>{photoCount}/9 fotos {photoCount < 2 ? "· adicione ao menos 2" : ""}</Text>
+        </>
+      )}
+      <NavRow onNext={onNext} onBack={onBack} nextDisabled={nextDisabled} />
     </Animated.View>
   );
 }
@@ -614,13 +757,14 @@ export default function CreateScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {step === 0 && <RecipientStep onNext={goNext} />}
-        {step === 1 && <MessageStep onNext={goNext} onBack={goBack} />}
-        {step === 2 && <MediaStep onNext={goNext} onBack={goBack} />}
-        {step === 3 && <TypeStep onNext={goNext} onBack={goBack} />}
-        {step === 4 && <StyleStep onNext={goNext} onBack={goBack} />}
-        {step === 5 && <DeliveryStep onNext={goNext} onBack={goBack} />}
-        {step === 6 && <ReviewStep onBack={goBack} />}
+        {step === 0 && <VideoTypeStep onNext={goNext} onBack={goBack} />}
+        {step === 1 && <RecipientStep onNext={goNext} onBack={goBack} />}
+        {step === 2 && <MessageStep onNext={goNext} onBack={goBack} />}
+        {step === 3 && <MediaStep onNext={goNext} onBack={goBack} />}
+        {step === 4 && <TypeStep onNext={goNext} onBack={goBack} />}
+        {step === 5 && <StyleStep onNext={goNext} onBack={goBack} />}
+        {step === 6 && <DeliveryStep onNext={goNext} onBack={goBack} />}
+        {step === 7 && <ReviewStep onBack={goBack} />}
       </Animated.ScrollView>
     </View>
   );

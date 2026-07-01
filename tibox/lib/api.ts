@@ -6,6 +6,7 @@ import type {
   GiftStyle,
   GiftType,
   MusicGenre,
+  VideoType,
 } from "@/types/gift";
 
 const BASE_URL =
@@ -72,6 +73,10 @@ export interface CreateGiftPayload {
   mood: GiftStyle;
   /** Music genre for the soundtrack — backend field name is `genre`. */
   genre?: MusicGenre;
+  /** Video clip format — backend field name is `videoType`. */
+  videoType?: VideoType;
+  /** Video URLs for the `raw_video` type — backend field name is `videos`. */
+  videos?: string[];
   message: string;
   notifyWhatsapp: boolean;
   deliveryMode: DeliveryMode;
@@ -193,12 +198,13 @@ export async function getGift(id: string): Promise<Gift> {
 /** Update gift status / fields. */
 export async function updateGift(
   id: string,
-  patch: Partial<Pick<Gift, "status" | "clipUri" | "openedAt">>,
+  patch: Partial<Pick<Gift, "status" | "clipUri" | "openedAt" | "videos">>,
 ): Promise<Gift> {
   const body: Record<string, unknown> = {};
   if (patch.status) body.status = patch.status;
   if (patch.clipUri) body.clipUrl = patch.clipUri;
   if (patch.openedAt) body.openedAt = patch.openedAt;
+  if (patch.videos) body.videos = patch.videos;
   const data = await apiFetch<Record<string, unknown>>(`/gifts/${id}`, {
     method: "PATCH",
     body: JSON.stringify(body),

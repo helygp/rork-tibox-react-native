@@ -2,6 +2,15 @@ export type GiftStatus = "draft" | "generating" | "scheduled" | "ready" | "opene
 
 export type GiftType = "digital" | "flowers" | "cake" | "item" | "experience";
 
+/** Video clip format — maps to the backend's `videoType` field. */
+export type VideoType =
+  | "cinematic_slideshow"
+  | "living_photo"
+  | "animated_card"
+  | "raw_video"
+  | "narrated_message"
+  | "budget_slideshow";
+
 export type GiftStyle = "romantico" | "alegre" | "nostalgico" | "epico" | "fofo";
 
 /** Music genre for the clip's soundtrack — maps to the backend's `genre` field. */
@@ -28,6 +37,10 @@ export interface Gift {
   type: GiftType;
   style: GiftStyle;
   song?: string;
+  /** Video clip format (backend field: `videoType`). */
+  videoType?: VideoType;
+  /** Video URLs for the `raw_video` type (backend field: `videos`). */
+  videos?: string[];
   /** Music genre for the clip's soundtrack (backend field: `genre`). */
   genre?: MusicGenre;
   /** Delivery city, required for physical gifts (backend field: `city`). */
