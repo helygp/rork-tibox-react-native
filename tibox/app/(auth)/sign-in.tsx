@@ -75,8 +75,9 @@ export default function SignInScreen() {
   const { signIn, signInWithUrl, isAuthenticated, isHydrated } = useSession();
   const [emailMode, setEmailMode] = useState<boolean>(false);
   const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState<
-    "google" | "apple" | "email" | "link" | null
+    "google" | "apple" | "email" | "link" | "password" | null
   >(null);
   const [sent, setSent] = useState(false);
   const [pastedLink, setPastedLink] = useState<string>("");
@@ -136,6 +137,21 @@ export default function SignInScreen() {
       setLoading(null);
     }
   }, [signInWithUrl, pastedLink]);
+
+  const handlePasswordLogin = useCallback(async () => {
+    setErrorMsg(null);
+    setLoading("password");
+    try {
+      const result = await signIn("email", email.trim(), password);
+      if (result?.error) {
+        setErrorMsg(result.error);
+        return;
+      }
+      // Success — the effect above navigates once the session updates.
+    } finally {
+      setLoading(null);
+    }
+  }, [signIn, email, password]);
 
   return (
     <Screen>
@@ -197,27 +213,50 @@ export default function SignInScreen() {
             )}
 
             {emailMode && !sent && (
-              <TextInput
-                value={email}
-                onChangeText={(t) => {
-                  setEmail(t);
-                  setErrorMsg(null);
-                }}
-                placeholder="seu@email.com"
-                placeholderTextColor={Colors.textMuted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoFocus
-                style={styles.input}
-              />
+              <>
+                <TextInput
+                  value={email}
+                  onChangeText={(t) => {
+                    setEmail(t);
+                    setErrorMsg(null);
+                  }}
+                  placeholder="seu@email.com"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoFocus
+                  style={styles.input}
+                />
+                <TextInput
+                  value={password}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    setErrorMsg(null);
+                  }}
+                  placeholder="Sua senha"
+                  placeholderTextColor={Colors.textMuted}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  style={styles.input}
+                />
+                <GradientButton
+                  label="Entrar"
+                  loading={loading === "password"}
+                  onPress={handlePasswordLogin}
+                  disabled={email.trim().length < 4 || password.length < 4}
+                />
+              </>
             )}
 
             {!sent && (
               <GradientButton
                 label={
-                  emailMode ? "Enviar link mágico" : "Continuar com email"
+                  emailMode
+                    ? "Ou receber um link por email"
+                    : "Continuar com email"
                 }
-                icon={<Mail size={20} color={Colors.white} />}
+                variant={emailMode ? "ghost" : undefined}
+                icon={emailMode ? undefined : <Mail size={20} color={Colors.white} />}
                 loading={loading === "email"}
                 onPress={() => handle("email")}
                 disabled={emailMode && email.trim().length < 4}

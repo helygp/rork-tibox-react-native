@@ -164,7 +164,17 @@ export const [SessionProvider, useSession] = createContextHook(() => {
     async (
       provider: "google" | "apple" | "email",
       email?: string,
+      password?: string,
     ): Promise<{ error?: string }> => {
+      if (provider === "email" && email && password) {
+        // Direct email + password login — lets you sign in immediately with
+        // an existing account (like the fixed test account) without waiting
+        // on a magic-link email.
+        const result = await signInWithPassword(email, password);
+        if (result.error) return result;
+        await queryClient.invalidateQueries({ queryKey: ["supabase-session"] });
+        return {};
+      }
       if (provider === "email" && email) {
         const result = await signInWithMagicLink(email);
         if (result.error) return result;
