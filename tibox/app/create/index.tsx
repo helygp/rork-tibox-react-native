@@ -312,21 +312,21 @@ function StyleStep({ onNext, onBack }: { onNext: () => void; onBack: () => void 
     stepContent: { flex: 1, paddingHorizontal: 24, paddingTop: 16 },
     stepTitle: { color: C.textPrimary, fontSize: 26, fontWeight: "800" as const, letterSpacing: -0.5, marginBottom: 6 },
     stepSub: { color: C.textSecondary, fontSize: 15, lineHeight: 21, marginBottom: 28 },
-    styleGrid: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 10 },
-    styleCard: { width: "30%" as const, flexGrow: 1, borderRadius: 18, overflow: "hidden" as const, borderWidth: 2, borderColor: "transparent" },
+    styleGrid: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 12 },
+    styleCard: { width: "31%" as const, flexGrow: 1, flexBasis: "31%" as const, borderRadius: 18, overflow: "hidden" as const, borderWidth: 2, borderColor: C.border },
     styleCardSelected: { borderColor: C.rose },
     styleCardPressed: { opacity: 0.85 },
-    styleCardInner: { paddingVertical: 20, alignItems: "center" as const, justifyContent: "center" as const, gap: 8, minHeight: 90 },
-    styleEmoji: { fontSize: 28 },
-    styleLabel: { color: C.textSecondary, fontSize: 13, fontWeight: "700" as const },
+    styleCardInner: { paddingVertical: 22, paddingHorizontal: 8, alignItems: "center" as const, justifyContent: "center" as const, gap: 10, minHeight: 100 },
+    styleEmoji: { fontSize: 30 },
+    styleLabel: { color: C.textSecondary, fontSize: 13, fontWeight: "700" as const, textAlign: "center" as const },
     styleLabelSelected: { color: C.white },
     styleCheck: { position: "absolute" as const, top: 6, right: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center" as const, justifyContent: "center" as const },
-    fieldGroup: { marginBottom: 20 },
-    fieldLabel: { color: C.textMuted, fontSize: 12, fontWeight: "700" as const, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 8, marginLeft: 4 },
-    chipGrid: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8 },
-    chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: C.inkCard, borderWidth: 1, borderColor: C.border },
+    fieldGroup: { marginTop: 28, marginBottom: 20 },
+    fieldLabel: { color: C.textMuted, fontSize: 12, fontWeight: "700" as const, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 12, marginLeft: 4 },
+    chipGrid: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 10 },
+    chip: { flexGrow: 1, flexBasis: "30%" as const, alignItems: "center" as const, justifyContent: "center" as const, paddingHorizontal: 14, paddingVertical: 14, borderRadius: 14, backgroundColor: C.inkCard, borderWidth: 1, borderColor: C.border },
     chipSelected: { backgroundColor: "rgba(143,209,79,0.15)", borderColor: C.rose },
-    chipText: { color: C.textSecondary, fontSize: 13, fontWeight: "600" as const },
+    chipText: { color: C.textSecondary, fontSize: 13, fontWeight: "600" as const, textAlign: "center" as const },
     chipTextSelected: { color: C.rose },
   }), [C]);
 
@@ -339,7 +339,7 @@ function StyleStep({ onNext, onBack }: { onNext: () => void; onBack: () => void 
           const selected = draft.style === s.key;
           return (
             <Pressable key={s.key} onPress={() => updateDraft({ style: s.key })} style={({ pressed }) => [styles.styleCard, selected && styles.styleCardSelected, pressed && styles.styleCardPressed]}>
-              <LinearGradient colors={selected ? s.gradient : ["#2A1E30", "#2A1E30"]} style={styles.styleCardInner}>
+              <LinearGradient colors={selected ? s.gradient : [C.inkCard, C.inkCardSoft]} style={styles.styleCardInner}>
                 <Text style={styles.styleEmoji}>{s.emoji}</Text>
                 <Text style={[styles.styleLabel, selected && styles.styleLabelSelected]}>{s.label}</Text>
                 {selected && <View style={styles.styleCheck}><Check size={14} color={C.white} /></View>}
