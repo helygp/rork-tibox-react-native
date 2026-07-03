@@ -3,16 +3,13 @@ import * as Linking from "expo-linking";
 import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 
-// NOTE: EXPO_PUBLIC_SUPABASE_URL / _ANON_KEY are managed (locked) by the Rork
-// platform and always point at the old Rork-managed Supabase, where the real
-// accounts don't exist. They cannot be edited from the env panel and keep
-// regenerating the .env. So we pin the self-hosted project directly here.
-// The anon key is public by design, so this is safe to commit.
+// Tibox uses a single self-hosted Supabase instance for auth, session, and JWT.
+// The anon key is public by design (safe to commit). This is the only Supabase
+// the app talks to — the backend at api.tibox.aurabr.app validates JWTs issued
+// by this instance.
 const supabaseUrl = "https://supabase.srv885928.hstgr.cloud";
 const supabaseAnonKey =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzEwMDAwMDAwLCJleHAiOjQ4NjYwMDAwMDB9.b-XgwtZRifFQstM2SKumXdusSYC5evASrmLxnSyW6SI";
-
-console.log("[Supabase] URL:", supabaseUrl);
 
 const redirectUrl = Linking.createURL("/auth/callback");
 
@@ -96,12 +93,8 @@ export async function signInWithPassword(
   password: string,
 ): Promise<{ error?: string }> {
   try {
-    console.log("[Supabase] signInWithPassword — URL:", supabaseUrl, "email:", email);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      console.error("[Supabase] signInWithPassword error:", error.message, "status:", error.status);
-      return { error: error.message };
-    }
+    if (error) return { error: error.message };
     return {};
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Erro desconhecido.";
