@@ -25,14 +25,13 @@ function AuthGate() {
     if (!isHydrated) return;
     const inAuthGroup = segments[0] === "(auth)";
     const inPublic = (segments[0] as string) === "g";
-    const guest = user?.isGuest ?? false;
 
-    if (!isAuthenticated && !guest && !inAuthGroup && !inPublic) {
+    if (!isAuthenticated && !inAuthGroup && !inPublic) {
       router.replace("/(auth)/onboarding");
-    } else if ((isAuthenticated || guest) && inAuthGroup) {
+    } else if (isAuthenticated && inAuthGroup) {
       router.replace("/(tabs)");
     }
-  }, [isAuthenticated, isHydrated, segments, router, user]);
+  }, [isAuthenticated, isHydrated, segments, router]);
 
   useEffect(() => {
     if (isHydrated) { void SplashScreen.hideAsync(); }

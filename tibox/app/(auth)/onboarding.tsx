@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { ArrowRight, CalendarHeart, Gift, Sparkles } from "lucide-react-native";
+import { ArrowRight, CalendarHeart, Gift, Sparkles, UserPlus } from "lucide-react-native";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Dimensions,
@@ -80,7 +80,6 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const C = useColors();
   const G = useGradients();
-  const { continueAsGuest } = useSession();
   const [current, setCurrent] = useState(0);
   const currentRef = useRef(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -98,10 +97,7 @@ export default function OnboardingScreen() {
     () =>
       StyleSheet.create({
         screen: { flex: 1, backgroundColor: C.ink },
-        topRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, paddingHorizontal: 20, height: 56 },
-        skipBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10, backgroundColor: C.inkCard, borderWidth: 1, borderColor: C.border },
-        skipPressed: { opacity: 0.7 },
-        skipText: { color: C.textSecondary, fontSize: 13, fontWeight: "600" as const },
+        topRow: { flexDirection: "row" as const, justifyContent: "flex-start" as const, alignItems: "center" as const, paddingHorizontal: 20, height: 56 },
         slides: { flex: 1 },
         slide: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, paddingHorizontal: 40, gap: 20, paddingBottom: 40 },
         slideIconWrap: { marginBottom: 8 },
@@ -110,8 +106,6 @@ export default function OnboardingScreen() {
         slideSub: { color: C.textSecondary, fontSize: 15, textAlign: "center" as const, lineHeight: 23, paddingHorizontal: 8 },
         bottom: { paddingHorizontal: 24, gap: 24 },
         lastActions: { gap: 12 },
-        guestLink: { alignSelf: "center" as const, paddingVertical: 6 },
-        guestLinkText: { color: C.textMuted, fontSize: 14, fontWeight: "600" as const, textDecorationLine: "underline" as const },
       }),
     [C],
   );
@@ -127,17 +121,14 @@ export default function OnboardingScreen() {
     if (next < SLIDES.length) { currentRef.current = next; setCurrent(next); scrollRef.current?.scrollTo({ x: next * SCREEN_W, animated: true }); }
   }, [SLIDES]);
 
-  const enterAsGuest = useCallback(() => { continueAsGuest(); router.replace("/(tabs)"); }, [continueAsGuest, router]);
   const goToSignIn = useCallback(() => { router.replace("/(auth)/sign-in"); }, [router]);
+  const goToSignUp = useCallback(() => { router.replace("/(auth)/sign-up"); }, [router]);
   const isLast = current === SLIDES.length - 1;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <View style={styles.topRow}>
         <MiniLogo />
-        <Pressable onPress={enterAsGuest} style={({ pressed }) => [styles.skipBtn, pressed && styles.skipPressed]}>
-          <Text style={styles.skipText}>Pular</Text>
-        </Pressable>
       </View>
 
       <ScrollView ref={scrollRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onScroll} scrollEventThrottle={16} style={styles.slides}>
@@ -162,7 +153,7 @@ export default function OnboardingScreen() {
         {isLast ? (
           <View style={styles.lastActions}>
             <GradientButton label="Entrar na minha conta" onPress={goToSignIn} icon={<ArrowRight size={20} color={C.white} />} />
-            <Pressable onPress={enterAsGuest} style={styles.guestLink}><Text style={styles.guestLinkText}>Continuar sem login</Text></Pressable>
+            <GradientButton label="Criar conta" onPress={goToSignUp} variant="ghost" icon={<UserPlus size={20} color={C.textPrimary} />} />
           </View>
         ) : (
           <GradientButton label="Próximo" onPress={goNext} variant="ghost" icon={<ArrowRight size={20} color={C.textPrimary} />} />

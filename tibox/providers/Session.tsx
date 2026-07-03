@@ -22,7 +22,6 @@ export interface TiboxUser {
   email: string;
   avatarUrl?: string;
   plan: "free" | "pro";
-  isGuest: boolean;
 }
 
 
@@ -36,7 +35,6 @@ function mapUser(session: Session | null): TiboxUser | null {
     email: u.email ?? "",
     avatarUrl: u.user_metadata?.avatar_url ?? undefined,
     plan: (u.app_metadata?.plan as "free" | "pro") ?? "free",
-    isGuest: false,
   };
 }
 
@@ -86,7 +84,7 @@ export const [SessionProvider, useSession] = createContextHook(() => {
     [sessionQuery.data],
   );
 
-  const isAuthenticated = !!user && !user.isGuest;
+  const isAuthenticated = !!user;
   const isHydrated = !sessionQuery.isLoading;
 
   const signIn = useCallback(
@@ -174,40 +172,24 @@ export const [SessionProvider, useSession] = createContextHook(() => {
     return getAccessToken();
   }, []);
 
-  const continueAsGuest = useCallback(() => {
-    const guest: TiboxUser = {
-      id: `guest-${Date.now()}`,
-      name: "Visitante",
-      email: "",
-      plan: "free",
-      isGuest: true,
-    };
-    queryClient.setQueryData(["supabase-session"], null);
-    return guest;
-  }, [queryClient]);
-
   const upgradeToPro = useCallback(async () => {
     // Pro upgrade handled via RevenueCat / StoreKit — placeholder.
     console.log("[Session] upgradeToPro requested");
   }, []);
-
-  const isGuest = user?.isGuest ?? false;
 
   return useMemo(
     () => ({
       user,
       isAuthenticated,
       isHydrated,
-      isGuest,
       signIn,
       signUp,
       signInWithUrl,
       verifyCode,
       signOut,
       getToken,
-      continueAsGuest,
       upgradeToPro,
     }),
-    [user, isAuthenticated, isHydrated, isGuest, signIn, signUp, signInWithUrl, verifyCode, signOut, getToken, continueAsGuest, upgradeToPro],
+    [user, isAuthenticated, isHydrated, signIn, signUp, signInWithUrl, verifyCode, signOut, getToken, upgradeToPro],
   );
 });
