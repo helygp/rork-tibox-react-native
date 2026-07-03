@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { ArrowRight, CalendarHeart, Gift, Sparkles, UserPlus } from "lucide-react-native";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Dimensions,
   NativeScrollEvent,
@@ -64,6 +64,49 @@ function MiniLogo() {
   );
 }
 
+function PulsingLogo() {
+  const G = useGradients();
+  const C = useColors();
+  const scale = useSharedValue(1);
+  const ringScale = useSharedValue(1);
+  const ringOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withRepeat(withTiming(1.06, { duration: 2200 }), -1, true);
+    ringScale.value = withRepeat(withTiming(1.5, { duration: 2200 }), -1, true);
+    ringOpacity.value = withRepeat(withTiming(0.25, { duration: 2200 }), -1, true);
+  }, [scale, ringScale, ringOpacity]);
+
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ringScale.value }],
+    opacity: ringOpacity.value,
+  }));
+  const logoStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        logoWrap: { alignItems: "center" as const, justifyContent: "center" as const, width: 120, height: 120, marginBottom: 8 },
+        logo: { width: 96, height: 96, borderRadius: 30, alignItems: "center" as const, justifyContent: "center" as const },
+        logoRing: { position: "absolute" as const, width: 96, height: 96, borderRadius: 30 },
+      }),
+    [],
+  );
+
+  return (
+    <View style={styles.logoWrap}>
+      <Animated.View style={[styles.logoRing, ringStyle]}>
+        <LinearGradient colors={G.brand as readonly [string, string]} style={StyleSheet.absoluteFill} />
+      </Animated.View>
+      <Animated.View style={logoStyle}>
+        <LinearGradient colors={G.brand as readonly [string, string]} style={styles.logo}>
+          <Gift size={40} color={C.white} />
+        </LinearGradient>
+      </Animated.View>
+    </View>
+  );
+}
+
 function Dots({ current }: { current: number }) {
   const C = useColors();
   return (
@@ -104,6 +147,9 @@ export default function OnboardingScreen() {
         slideIcon: { width: 120, height: 120, borderRadius: 36, alignItems: "center" as const, justifyContent: "center" as const },
         slideTitle: { color: C.textPrimary, fontSize: 24, fontWeight: "800" as const, textAlign: "center" as const, letterSpacing: -0.5 },
         slideSub: { color: C.textSecondary, fontSize: 15, textAlign: "center" as const, lineHeight: 23, paddingHorizontal: 8 },
+        lastSlide: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, paddingHorizontal: 40, gap: 16, paddingBottom: 40 },
+        brandWord: { color: C.textPrimary, fontSize: 40, fontWeight: "800" as const, letterSpacing: -1 },
+        brandTagline: { color: C.textSecondary, fontSize: 16, textAlign: "center" as const, lineHeight: 24, paddingHorizontal: 8 },
         bottom: { paddingHorizontal: 24, gap: 24 },
         lastActions: { gap: 12 },
       }),
@@ -133,6 +179,18 @@ export default function OnboardingScreen() {
 
       <ScrollView ref={scrollRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onScroll} scrollEventThrottle={16} style={styles.slides}>
         {SLIDES.map((slide, i) => {
+          const isLastSlide = i === SLIDES.length - 1;
+          if (isLastSlide) {
+            return (
+              <View key={i} style={[styles.lastSlide, { width: SCREEN_W }]}>
+                <Animated.View entering={FadeInRight.delay(100).springify()}>
+                  <PulsingLogo />
+                </Animated.View>
+                <Animated.Text entering={FadeInDown.delay(200).springify()} style={styles.brandWord}>Tibox</Animated.Text>
+                <Animated.Text entering={FadeInDown.delay(300).springify()} style={styles.brandTagline}>Presentes que emocionam,{"\n"}entregues na hora certa.</Animated.Text>
+              </View>
+            );
+          }
           const Icon = slide.icon;
           return (
             <View key={i} style={[styles.slide, { width: SCREEN_W }]}>
