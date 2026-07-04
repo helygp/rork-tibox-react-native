@@ -4,9 +4,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import {
-  ArrowLeft, ArrowRight, Calendar, Camera, Check, ChevronRight, Clock,
-  Film, Gift, ImageOff, ImagePlus, MapPin, MessageCircle, Music, Palette, Sparkles,
-  RefreshCw, Trash2, User, Video, X,
+  ArrowLeft, ArrowRight, Calendar, Camera, Check, Clock,
+  Film, Gift, ImageOff, ImagePlus, MapPin, MessageCircle, Palette, Sparkles,
+  RefreshCw, User, Video, X,
 } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -559,7 +559,7 @@ function DeliveryStep({ onNext, onBack }: { onNext: () => void; onBack: () => vo
     scheduleBtn: { flex: 1, flexDirection: "row" as const, alignItems: "center" as const, gap: 8, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, backgroundColor: "rgba(199,178,206,0.08)", borderWidth: 1, borderColor: C.border },
     scheduleBtnTime: { flex: 0.6 },
     scheduleBtnPressed: { backgroundColor: "rgba(199,178,206,0.15)" },
-    scheduleBtnText: { color: C.textPrimary, fontSize: 13, fontWeight: "600" as const, textTransform: "capitalize" as const, flexShrink: 1, numberOfLines: 1 as const },
+    scheduleBtnText: { color: C.textPrimary, fontSize: 13, fontWeight: "600" as const, textTransform: "capitalize" as const, flexShrink: 1 },
     switchRow: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const, backgroundColor: C.inkCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border, marginBottom: 16 },
     switchBody: { flex: 1, gap: 2 },
     switchLabel: { color: C.textPrimary, fontSize: 15, fontWeight: "600" as const },
@@ -593,10 +593,10 @@ function DeliveryStep({ onNext, onBack }: { onNext: () => void; onBack: () => vo
           <Text style={styles.scheduleLabel}>Data e hora da entrega</Text>
           <View style={styles.scheduleRow}>
             <Pressable onPress={() => setShowPicker(true)} style={({ pressed }) => [styles.scheduleBtn, pressed && styles.scheduleBtnPressed]}>
-              <Calendar size={16} color={C.roseSoft} /><Text style={styles.scheduleBtnText}>{formattedDate}</Text>
+              <Calendar size={16} color={C.roseSoft} /><Text style={styles.scheduleBtnText} numberOfLines={1}>{formattedDate}</Text>
             </Pressable>
             <Pressable onPress={() => setShowTimePicker(true)} style={({ pressed }) => [styles.scheduleBtn, styles.scheduleBtnTime, pressed && styles.scheduleBtnPressed]}>
-              <Clock size={16} color={C.gold} /><Text style={styles.scheduleBtnText}>{formattedTime}</Text>
+              <Clock size={16} color={C.gold} /><Text style={styles.scheduleBtnText} numberOfLines={1}>{formattedTime}</Text>
             </Pressable>
           </View>
           {showPicker && <DateTimePicker value={scheduledDate} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={handleDateChange} minimumDate={new Date()} maximumDate={new Date(Date.now() + 365 * 86_400_000)} />}
@@ -631,7 +631,6 @@ function DeliveryStep({ onNext, onBack }: { onNext: () => void; onBack: () => vo
 /* ── Step 7: Review ── */
 
 function ReviewStep({ onBack }: { onBack: () => void }) {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const C = useColors();
   const { draft, finalizeGift, resetDraft } = useGiftStore();

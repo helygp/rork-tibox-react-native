@@ -6,10 +6,8 @@ import {
   Dimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import Animated, {
@@ -25,7 +23,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import GradientButton from "@/components/GradientButton";
 import { useColors, useGradients } from "@/constants/colors";
-import { useSession } from "@/providers/Session";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 

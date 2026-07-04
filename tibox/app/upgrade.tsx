@@ -1,9 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { Crown, Gift, Sparkles, Star, Zap } from "lucide-react-native";
+import { Crown, Sparkles, Star, Zap } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,

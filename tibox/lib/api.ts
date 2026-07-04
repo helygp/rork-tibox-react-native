@@ -127,7 +127,7 @@ function normalizeDeliveryMode(raw: Record<string, unknown>): DeliveryMode {
 }
 
 function normalizeGift(raw: Record<string, unknown>, fallback?: Partial<Gift>): Gift {
-  const mediaRaw = pick<Array<Record<string, unknown>>>(raw, "media") ?? [];
+  const mediaRaw = pick<Record<string, unknown>[]>(raw, "media") ?? [];
   return {
     id: pick<string>(raw, "id") ?? fallback?.id ?? "",
     recipientName:
@@ -171,7 +171,7 @@ function normalizeGift(raw: Record<string, unknown>, fallback?: Partial<Gift>): 
 /** List gifts for the current user. Falls back gracefully if endpoint not yet available. */
 export async function listGifts(): Promise<Gift[]> {
   try {
-    const data = await apiFetch<Array<Record<string, unknown>>>("/gifts");
+    const data = await apiFetch<Record<string, unknown>[]>("/gifts");
     return data.map((g) => normalizeGift(g));
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {

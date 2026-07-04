@@ -1,4 +1,3 @@
-import { Video, ResizeMode } from "expo-av";
 import { BlurView } from "expo-blur";
 import * as Clipboard from "expo-clipboard";
 import { Image } from "expo-image";
@@ -14,7 +13,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import GradientButton from "@/components/GradientButton";
 import { useColors, useGradients } from "@/constants/colors";
 import { useGiftStore } from "@/providers/GiftStore";
-import type { Gift as GiftType } from "@/types/gift";
 
 const WEB_BASE = "https://tibox.aurabr.app/g";
 

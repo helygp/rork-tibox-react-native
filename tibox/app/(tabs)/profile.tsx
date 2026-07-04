@@ -4,7 +4,6 @@ import { Crown, LogOut, Mail, Moon, Shield, Sun } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -61,8 +60,7 @@ function SettingRow({
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, signOut, upgradeToPro } = useSession();
-  const [upgrading, setUpgrading] = useState(false);
+  const { user, signOut } = useSession();
   const C = useColors();
   const G = useGradients();
   const { mode, toggleTheme } = useTheme();
@@ -94,13 +92,6 @@ export default function ProfileScreen() {
       { text: "Sair", style: "destructive", onPress: () => { void signOut(); } },
     ]);
   }, [signOut]);
-
-  const handleUpgrade = useCallback(async () => {
-    setUpgrading(true);
-    await upgradeToPro();
-    setUpgrading(false);
-    Alert.alert("✨ Plano Pro", "Funcionalidade em breve. Seus presentes serão ilimitados!");
-  }, [upgradeToPro]);
 
   const firstName = user?.name?.split(" ")[0] ?? "Você";
 
@@ -140,7 +131,7 @@ export default function ProfileScreen() {
 
         {user?.plan !== "pro" && (
           <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.section}>
-            <GradientButton label="Ver planos Tibox Pro" onPress={() => router.push("/upgrade")} loading={upgrading} icon={<Crown size={18} color={C.white} />} />
+            <GradientButton label="Ver planos Tibox Pro" onPress={() => router.push("/upgrade")} icon={<Crown size={18} color={C.white} />} />
           </Animated.View>
         )}
 

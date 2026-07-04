@@ -3,14 +3,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft, Calendar, CheckCircle2, Clock, Eye, Gift, Heart,
-  MessageCircle, Sparkles, Star,
+  MessageCircle, Sparkles,
 } from "lucide-react-native";
 import React, { useCallback, useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import CodeInput from "@/components/CodeInput";
 import GradientButton from "@/components/GradientButton";
 import { useColors, useGradients } from "@/constants/colors";
 import { useGiftStore } from "@/providers/GiftStore";

@@ -1,16 +1,14 @@
-import { Video, ResizeMode } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Clock, Heart, Sparkles } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import GradientButton from "@/components/GradientButton";
 import { useColors, useGradients } from "@/constants/colors";
 import { getGenerationStatus, startGeneration } from "@/lib/api";
 import { useGiftStore } from "@/providers/GiftStore";
-import type { Gift as GiftType } from "@/types/gift";
 
 function PulseRing({ delayMs }: { delayMs: number }) {
   const C = useColors();
@@ -70,11 +68,25 @@ export default function GeneratingScreen() {
   }, [id, gift, router]);
 
   const ensuredStartRef = useRef(false);
+  const attemptsRef = useRef(0);
+  const MAX_ATTEMPTS = 60; // ~5 minutos a 5s cada
+  const [pollFailed, setPollFailed] = useState(false);
+
+  const resetPoll = useCallback(() => {
+    attemptsRef.current = 0;
+    setPollFailed(false);
+  }, []);
+
   useEffect(() => {
-    if (!id) return;
+    if (!id || pollFailed) return;
     let cancelled = false;
 
     const poll = async () => {
+      attemptsRef.current += 1;
+      if (attemptsRef.current > MAX_ATTEMPTS) {
+        if (!cancelled) setPollFailed(true);
+        return;
+      }
       try {
         const status = await getGenerationStatus(id);
         if (cancelled) return;
@@ -95,12 +107,19 @@ export default function GeneratingScreen() {
     };
 
     void poll();
-    const interval = setInterval(() => { void poll(); }, 5000);
+    const interval = setInterval(() => {
+      if (attemptsRef.current <= MAX_ATTEMPTS) {
+        void poll();
+      } else {
+        clearInterval(interval);
+        if (!cancelled) setPollFailed(true);
+      }
+    }, 5000);
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [id, router, markReady]);
+  }, [id, router, markReady, pollFailed]);
 
   const styles = useMemo(
     () =>
@@ -121,6 +140,10 @@ export default function GeneratingScreen() {
         tipCard: { flexDirection: "row" as const, gap: 12, backgroundColor: C.inkCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border, marginTop: 16, alignItems: "flex-start" as const },
         tipText: { color: C.textSecondary, fontSize: 13, lineHeight: 20, flex: 1 },
         bottom: { paddingHorizontal: 24, gap: 12, marginTop: 24, width: "100%" as const },
+        errorIcon: { width: 88, height: 88, borderRadius: 32, alignItems: "center" as const, justifyContent: "center" as const, marginBottom: 8 },
+        errorTitle: { color: C.textPrimary, fontSize: 24, fontWeight: "800" as const, textAlign: "center" as const, letterSpacing: -0.5 },
+        errorSub: { color: C.textSecondary, fontSize: 15, textAlign: "center" as const, lineHeight: 22, paddingHorizontal: 8 },
+        errorActions: { paddingHorizontal: 24, gap: 12, marginTop: 24, width: "100%" as const },
       }),
     [C],
   );
@@ -137,11 +160,30 @@ export default function GeneratingScreen() {
         <View style={styles.backBtn} />
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      {pollFailed ? (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.errorIcon}>
+            <LinearGradient colors={["#3A2A40", "#2A1E30"] as readonly [string, string]} style={styles.errorIcon}>
+              <Clock size={40} color={C.gold} />
+            </LinearGradient>
+          </View>
+          <Text style={styles.errorTitle}>A geração está demorando mais que o esperado</Text>
+          <Text style={styles.errorSub}>O clipe pode ainda estar sendo processado no servidor.{"\n"}Tente novamente em instantes ou volte mais tarde.</Text>
+          <View style={[styles.errorActions, { paddingBottom: insets.bottom + 20 }]}>
+            <GradientButton label="Tentar novamente" onPress={resetPoll} icon={<ArrowLeft size={18} color={C.white} />} />
+            <GradientButton label="Voltar para o início" onPress={handleBack} variant="ghost" icon={<ArrowLeft size={18} color={C.textPrimary} />} />
+          </View>
+        </ScrollView>
+      ) : (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.iconArea}>
           <PulseRing delayMs={0} />
           <PulseRing delayMs={600} />
@@ -171,6 +213,7 @@ export default function GeneratingScreen() {
           <GradientButton label="Voltar para o início" onPress={handleBack} variant="ghost" icon={<ArrowLeft size={18} color={C.textPrimary} />} />
         </View>
       </ScrollView>
+      )}
     </View>
   );
 }

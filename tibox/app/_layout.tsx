@@ -15,7 +15,7 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function AuthGate() {
-  const { isAuthenticated, isHydrated, user } = useSession();
+  const { isAuthenticated, isHydrated } = useSession();
   const segments = useSegments();
   const router = useRouter();
   const C = useColors();
