@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -9,6 +10,11 @@ import { useColors, useTheme } from "@/constants/colors";
 import { GiftStoreProvider } from "@/providers/GiftStore";
 import { SessionProvider, useSession } from "@/providers/Session";
 import { ThemeProvider } from "@/providers/Theme";
+
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
+if (SENTRY_DSN) {
+  Sentry.init({ dsn: SENTRY_DSN, enableNative: false });
+}
 
 SplashScreen.preventAutoHideAsync();
 

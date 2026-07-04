@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "rork-app",
+    "scheme": "tibox",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.s4bvsixkrldc482ue1bze"
+      "bundleIdentifier": "com.aurabr.tibox"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.s4bvsixkrldc482ue1bze"
+      "package": "com.aurabr.tibox"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -35,7 +35,8 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "@sentry/react-native/expo"
     ],
     "experiments": {
       "typedRoutes": true
