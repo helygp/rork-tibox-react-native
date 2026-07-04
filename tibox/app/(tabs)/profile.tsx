@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Crown, LogOut, Mail, Moon, Shield, Sun } from "lucide-react-native";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   Alert,
   Pressable,

@@ -274,7 +274,7 @@ function MediaStep({ onNext, onBack }: { onNext: () => void; onBack: () => void 
   const C = useColors();
   const G = useGradients();
   const { draft, updateDraft } = useGiftStore();
-  const media = draft.media ?? [];
+  const media = useMemo(() => draft.media ?? [], [draft.media]);
   const videoType = (draft.videoType as VideoType) ?? "cinematic_slideshow";
 
   const isSingle = PHOTO_SINGLE_TYPES.includes(videoType);

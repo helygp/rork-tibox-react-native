@@ -32,14 +32,15 @@ function PulseRing({ delayMs }: { delayMs: number }) {
   return <Animated.View style={[{ position: "absolute" as const, width: 88, height: 88, borderRadius: 32, backgroundColor: C.roseSoft, transform: [{ scale: anim }], opacity }]} />;
 }
 
+const MESSAGES = ["Selecionando os melhores momentos...", "Criando transições suaves...", "Ajustando o ritmo da música...", "Adicionando toques de emoção...", "Quase pronto — montando o clipe final..."];
+
 function ProcessingMessages() {
   const C = useColors();
-  const messages = ["Selecionando os melhores momentos...", "Criando transições suaves...", "Ajustando o ritmo da música...", "Adicionando toques de emoção...", "Quase pronto — montando o clipe final..."];
   const [idx, setIdx] = useState(0);
 
-  useEffect(() => { const interval = setInterval(() => { setIdx((prev) => (prev + 1) % messages.length); }, 4000); return () => clearInterval(interval); }, []);
+  useEffect(() => { const interval = setInterval(() => { setIdx((prev) => (prev + 1) % MESSAGES.length); }, 4000); return () => clearInterval(interval); }, []);
 
-  return <Animated.Text key={idx} style={{ color: C.gold, fontSize: 13, fontWeight: "600", textAlign: "center" }}>{messages[idx]}</Animated.Text>;
+  return <Animated.Text key={idx} style={{ color: C.gold, fontSize: 13, fontWeight: "600", textAlign: "center" }}>{MESSAGES[idx]}</Animated.Text>;
 }
 
 export default function GeneratingScreen() {

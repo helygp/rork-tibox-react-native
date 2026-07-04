@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
-import { ArrowLeft, CheckCircle2, Copy, Eye, EyeOff, Gift, LinkIcon, MessageCircle, Share2 } from "lucide-react-native";
+import { ArrowLeft, CheckCircle2, Copy, Eye, EyeOff, LinkIcon, MessageCircle, Share2 } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";

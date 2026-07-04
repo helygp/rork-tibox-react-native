@@ -60,7 +60,7 @@ async function persistCachedGifts(gifts: Gift[]): Promise<void> {
 
 export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
   const queryClient = useQueryClient();
-  const { user, getToken } = useSession();
+  const { user } = useSession();
   const [draft, setDraft] = useState<DraftGift>({});
   const [localGifts, setLocalGifts] = useState<Gift[]>([]);
   const [isOffline, setIsOffline] = useState(false);
@@ -265,6 +265,38 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
 
   /* ── Poll generation status ── */
 
+  const markReady = useCallback(
+    (id: string, clipUri: string) => {
+      // Update via API.
+      void updateGift(id, { status: "ready", clipUri }).catch(() =>
+        console.log("[GiftStore] updateGift failed"),
+      );
+      // Update local cache immediately.
+      const updateFn = (prev: Gift[] | undefined) =>
+        (prev ?? []).map((g) =>
+          g.id === id
+            ? {
+                ...g,
+                status:
+                  g.deliveryMode === "scheduled"
+                    ? ("scheduled" as const)
+                    : ("ready" as const),
+                clipUri,
+              }
+            : g,
+        );
+      setLocalGifts((prev) => {
+        const next = updateFn(prev);
+        void persistCachedGifts(next);
+        return next;
+      });
+      queryClient.setQueryData<Gift[]>(["gifts", user?.id], (prev: Gift[] | undefined) =>
+        updateFn(prev),
+      );
+    },
+    [queryClient, user?.id],
+  );
+
   const [pollingIds, setPollingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -295,7 +327,7 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
       }
     }, 5000);
     return () => clearInterval(interval);
-  }, [pollingIds, queryClient]);
+  }, [pollingIds, queryClient, markReady]);
 
   const startPolling = useCallback((id: string) => {
     setPollingIds((prev) => new Set(prev).add(id));
@@ -364,38 +396,6 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingGiftIds, user?.id]);
 
-  const markReady = useCallback(
-    (id: string, clipUri: string) => {
-      // Update via API.
-      void updateGift(id, { status: "ready", clipUri }).catch(() =>
-        console.log("[GiftStore] updateGift failed"),
-      );
-      // Update local cache immediately.
-      const updateFn = (prev: Gift[] | undefined) =>
-        (prev ?? []).map((g) =>
-          g.id === id
-            ? {
-                ...g,
-                status:
-                  g.deliveryMode === "scheduled"
-                    ? ("scheduled" as const)
-                    : ("ready" as const),
-                clipUri,
-              }
-            : g,
-        );
-      setLocalGifts((prev) => {
-        const next = updateFn(prev);
-        void persistCachedGifts(next);
-        return next;
-      });
-      queryClient.setQueryData<Gift[]>(["gifts", user?.id], (prev: Gift[] | undefined) =>
-        updateFn(prev),
-      );
-    },
-    [queryClient, user?.id],
-  );
-
   const markOpened = useCallback(
     (publicId: string) => {
       const updateFn = (prev: Gift[] | undefined) =>
@@ -461,6 +461,7 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
     [
       gifts,
       giftsQuery.isLoading,
+      localGifts.length,
       isOffline,
       draft,
       updateDraft,
