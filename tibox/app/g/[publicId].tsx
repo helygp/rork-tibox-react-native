@@ -3,7 +3,7 @@ import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams } from "expo-router";
-import { Heart, Lock, MessageCircle, ShieldQuestion, Sparkles, Star, Unlock } from "lucide-react-native";
+import { Heart, Lock, MessageCircle, ShieldQuestion, Sparkles, Star, Unlock, Calendar, Clock } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown, FadeInRight, useAnimatedStyle, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
@@ -64,6 +64,59 @@ function LockedView({ gift, code, onChangeCode, error, onUnlock }: { gift: Gift;
         </LinearGradient>
       </Pressable>
       <Text style={styles.lockedHint}>Peça a senha para quem enviou o presente.</Text>
+    </Animated.View>
+  );
+}
+
+function ScheduledView({ gift, unlockDate }: { gift: Gift; unlockDate: Date }) {
+  const C = useColors();
+  const G = useGradients();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const msRemaining = Math.max(0, unlockDate.getTime() - now);
+  const days = Math.floor(msRemaining / 86_400_000);
+  const hours = Math.floor((msRemaining % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((msRemaining % 3_600_000) / 60_000);
+  const seconds = Math.floor((msRemaining % 60_000) / 1000);
+  const dateStr = unlockDate.toLocaleDateString("pt-BR", { day: "numeric", month: "long", weekday: "long" });
+  const timeStr = unlockDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+  const styles = useMemo(() => StyleSheet.create({
+    scheduledWrap: { alignItems: "center" as const, gap: 16, paddingVertical: 20 },
+    scheduledIconWrap: { alignItems: "center" as const, justifyContent: "center" as const, marginBottom: 8, width: 100, height: 100, borderRadius: 32 },
+    scheduledTitle: { color: C.textPrimary, fontSize: 24, fontWeight: "800" as const, textAlign: "center" as const, letterSpacing: -0.5 },
+    scheduledSub: { color: C.textSecondary, fontSize: 15, textAlign: "center" as const, lineHeight: 21 },
+    countdownRow: { flexDirection: "row" as const, gap: 10, marginTop: 8 },
+    countdownUnit: { alignItems: "center" as const, backgroundColor: C.inkCard, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: C.border, minWidth: 60 },
+    countdownValue: { color: C.gold, fontSize: 24, fontWeight: "800" as const },
+    countdownLabel: { color: C.textMuted, fontSize: 11, fontWeight: "700" as const, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+    dateInfo: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, marginTop: 4 },
+    dateText: { color: C.gold, fontSize: 14, fontWeight: "600" as const },
+    scheduledHint: { color: C.textMuted, fontSize: 13, textAlign: "center" as const, lineHeight: 18, paddingHorizontal: 12, marginTop: 8 },
+  }), [C]);
+
+  return (
+    <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.scheduledWrap}>
+      <LinearGradient colors={G.gold as readonly [string, string]} style={styles.scheduledIconWrap}>
+        <Calendar size={40} color={C.ink} />
+      </LinearGradient>
+      <Text style={styles.scheduledTitle}>Quase lá!</Text>
+      <Text style={styles.scheduledSub}>{gift.recipientName}, seu presente está pronto mas foi agendado para uma data especial.</Text>
+      <View style={styles.countdownRow}>
+        <View style={styles.countdownUnit}><Text style={styles.countdownValue}>{String(days).padStart(2, "0")}</Text><Text style={styles.countdownLabel}>dias</Text></View>
+        <View style={styles.countdownUnit}><Text style={styles.countdownValue}>{String(hours).padStart(2, "0")}</Text><Text style={styles.countdownLabel}>hrs</Text></View>
+        <View style={styles.countdownUnit}><Text style={styles.countdownValue}>{String(minutes).padStart(2, "0")}</Text><Text style={styles.countdownLabel}>min</Text></View>
+        <View style={styles.countdownUnit}><Text style={styles.countdownValue}>{String(seconds).padStart(2, "0")}</Text><Text style={styles.countdownLabel}>seg</Text></View>
+      </View>
+      <View style={styles.dateInfo}>
+        <Clock size={14} color={C.gold} />
+        <Text style={styles.dateText}>{dateStr} às {timeStr}</Text>
+      </View>
+      <Text style={styles.scheduledHint}>Volte nessa data para abrir seu presente. Quem enviou escolheu esse momento com carinho.</Text>
     </Animated.View>
   );
 }
@@ -139,7 +192,12 @@ export default function PublicGiftScreen() {
 
   const gift = useMemo(() => (publicId ? getByPublicId(publicId) : undefined), [publicId, getByPublicId]);
 
-  useEffect(() => { if (gift && (gift.status === "opened" || gift.status === "delivered")) { setUnlocked(true); } }, [gift]);
+  // Agendamento: se o presente tem scheduledFor no futuro, bloqueia o acesso
+  // até a data — mesmo se o clipe já está pronto.
+  const unlockDate = gift?.scheduledFor ? new Date(gift.scheduledFor) : null;
+  const isLocked = unlockDate ? unlockDate.getTime() > Date.now() : false;
+
+  useEffect(() => { if (gift && (gift.status === "opened" || gift.status === "delivered") && !isLocked) { setUnlocked(true); } }, [gift, isLocked]);
 
   const handleUnlock = useCallback(() => {
     if (!gift) return;
@@ -186,7 +244,13 @@ export default function PublicGiftScreen() {
           <Text style={styles.toBadgeLabel}>Para</Text><Text style={styles.toBadgeName}>{gift.recipientName}</Text>
         </Animated.View>
 
-        {unlocked ? <UnlockedView gift={gift} /> : <LockedView gift={gift} code={code} onChangeCode={(c) => { setCode(c); setError(false); }} error={error} onUnlock={handleUnlock} />}
+        {isLocked && unlockDate ? (
+          <ScheduledView gift={gift} unlockDate={unlockDate} />
+        ) : unlocked ? (
+          <UnlockedView gift={gift} />
+        ) : (
+          <LockedView gift={gift} code={code} onChangeCode={(c) => { setCode(c); setError(false); }} error={error} onUnlock={handleUnlock} />
+        )}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>

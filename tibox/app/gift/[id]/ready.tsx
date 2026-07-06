@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
-import { ArrowLeft, CheckCircle2, Copy, Eye, EyeOff, LinkIcon, MessageCircle, Share2 } from "lucide-react-native";
+import { ArrowLeft, Calendar, CheckCircle2, Copy, Eye, EyeOff, LinkIcon, MessageCircle, Share2 } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -29,6 +29,9 @@ export default function ReadyScreen() {
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${encodeURIComponent("220x220")}&data=${encodeURIComponent(publicLink)}&margin=8`;
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const isScheduled = gift?.status === "scheduled" && !!gift?.scheduledFor;
+  const scheduledDate = gift?.scheduledFor ? new Date(gift.scheduledFor) : null;
 
   const styles = useMemo(() => StyleSheet.create({
     screen: { flex: 1, backgroundColor: C.ink },
@@ -67,12 +70,23 @@ export default function ReadyScreen() {
     codeHidden: { color: C.textPrimary, fontSize: 26, fontWeight: "800" as const, letterSpacing: 8 },
     msgCard: { flexDirection: "row" as const, gap: 10, backgroundColor: C.inkCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border, marginBottom: 16, alignItems: "flex-start" as const },
     msgText: { color: C.textSecondary, fontSize: 14, lineHeight: 21, flex: 1 },
+    scheduleBanner: { flexDirection: "row" as const, gap: 12, backgroundColor: "rgba(244,199,123,0.08)", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "rgba(244,199,123,0.25)", marginBottom: 16, alignItems: "center" as const },
+    scheduleBannerBody: { flex: 1, gap: 2 },
+    scheduleBannerTitle: { color: C.gold, fontSize: 15, fontWeight: "700" as const },
+    scheduleBannerText: { color: C.textSecondary, fontSize: 13 },
     actions: { gap: 12, paddingTop: 4 },
   }), [C]);
 
   const handleCopy = useCallback(async () => { await Clipboard.setStringAsync(publicLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }, [publicLink]);
   const handleShare = useCallback(async () => { try { await Sharing.shareAsync(publicLink, { mimeType: "text/plain", dialogTitle: "Compartilhar presente Tibox" }); } catch {} }, [publicLink]);
   const handleBack = useCallback(() => { router.replace("/(tabs)"); }, [router]);
+
+  const scheduledDateStr = scheduledDate
+    ? scheduledDate.toLocaleDateString("pt-BR", { day: "numeric", month: "long", weekday: "long" })
+    : "";
+  const scheduledTimeStr = scheduledDate
+    ? scheduledDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    : "";
 
   if (!gift) {
     return (
@@ -89,7 +103,7 @@ export default function ReadyScreen() {
         <Pressable onPress={handleBack} style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}>
           <ArrowLeft size={22} color={C.textSecondary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Presente pronto!</Text>
+        <Text style={styles.headerTitle}>{isScheduled ? "Presente agendado" : "Presente pronto!"}</Text>
         <View style={styles.backBtn} />
       </View>
 
@@ -98,10 +112,20 @@ export default function ReadyScreen() {
           {gift.media[0] ? <Image source={{ uri: gift.media[0].uri }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <LinearGradient colors={G.hero as readonly [string, string, string]} style={StyleSheet.absoluteFill} />}
           <BlurView intensity={25} style={styles.heroOverlay}>
             <LinearGradient colors={G.brand as readonly [string, string]} style={styles.heroBadge}><CheckCircle2 size={28} color={C.white} /></LinearGradient>
-            <Text style={styles.heroText}>Seu presente está pronto!</Text>
-            <Text style={styles.heroSub}>Compartilhe o link com {gift.recipientName.split(" ")[0]} agora.</Text>
+            <Text style={styles.heroText}>{isScheduled ? "Presente agendado!" : "Seu presente está pronto!"}</Text>
+            <Text style={styles.heroSub}>{isScheduled ? `Será liberado para ${gift.recipientName.split(" ")[0]} em ${scheduledDateStr}.` : `Compartilhe o link com ${gift.recipientName.split(" ")[0]} agora.`}</Text>
           </BlurView>
         </Animated.View>
+
+        {isScheduled && (
+          <Animated.View entering={FadeInDown.delay(80).springify()} style={styles.scheduleBanner}>
+            <Calendar size={18} color={C.gold} />
+            <View style={styles.scheduleBannerBody}>
+              <Text style={styles.scheduleBannerTitle}>Entrega agendada</Text>
+              <Text style={styles.scheduleBannerText}>{scheduledDateStr} às {scheduledTimeStr}</Text>
+            </View>
+          </Animated.View>
+        )}
 
         <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.linkCard}>
           <View style={styles.linkIconRow}><LinkIcon size={18} color={C.rose} /><Text style={styles.linkLabel}>Link do presente</Text></View>

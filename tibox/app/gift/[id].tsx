@@ -3,10 +3,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft, Calendar, CheckCircle2, Clock, Eye, Gift, Heart,
-  MessageCircle, Sparkles,
+  MessageCircle, Sparkles, Trash2, RefreshCw, AlertTriangle,
 } from "lucide-react-native";
-import React, { useCallback, useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -60,8 +60,43 @@ export default function GiftDetailScreen() {
   const C = useColors();
   const G = useGradients();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getById } = useGiftStore();
+  const { getById, regenerateGift, removeGift } = useGiftStore();
   const gift = useMemo(() => (id ? getById(id) : undefined), [id, getById]);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const isStuckDraft = gift?.status === "draft" && gift?.videoType !== "raw_video";
+
+  const handleRegenerate = useCallback(async () => {
+    if (!gift) return;
+    setRegenerating(true);
+    try {
+      await regenerateGift(gift.id);
+      router.replace(`/gift/${gift.id}/generating`);
+    } catch {
+      Alert.alert("Erro", "Não foi possível reprocessar o presente. Tente novamente.");
+    } finally {
+      setRegenerating(false);
+    }
+  }, [gift, regenerateGift, router]);
+
+  const handleDelete = useCallback(() => {
+    if (!gift) return;
+    Alert.alert(
+      "Excluir presente?",
+      "Este rascunho será removido permanentemente.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: () => {
+            void removeGift(gift.id);
+            router.replace("/(tabs)");
+          },
+        },
+      ],
+    );
+  }, [gift, removeGift, router]);
 
   const STATUS_META = useMemo<Record<GiftStatus, { label: string; color: string; icon: React.FC<{ size: number; color: string }> }>>(() => ({
     draft: { label: "Rascunho", color: C.textMuted, icon: Clock },
@@ -103,6 +138,12 @@ export default function GiftDetailScreen() {
     msgText: { color: C.textSecondary, fontSize: 15, lineHeight: 22, flex: 1 },
     draftNotice: { backgroundColor: C.inkCard, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: C.border, marginTop: 16, alignItems: "center" as const, gap: 12 },
     draftNoticeText: { color: C.textMuted, fontSize: 14, textAlign: "center" as const, lineHeight: 21 },
+    draftActions: { gap: 10, marginTop: 20, paddingHorizontal: 4 },
+    diagnoseCard: { flexDirection: "row" as const, gap: 12, backgroundColor: C.inkCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border, marginBottom: 12, alignItems: "flex-start" as const },
+    diagnoseIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(244,199,123,0.12)", alignItems: "center" as const, justifyContent: "center" as const },
+    diagnoseBody: { flex: 1, gap: 2 },
+    diagnoseTitle: { color: C.textPrimary, fontSize: 15, fontWeight: "700" as const },
+    diagnoseText: { color: C.textMuted, fontSize: 13, lineHeight: 18 },
   }), [C]);
 
   if (!gift) {
@@ -149,10 +190,37 @@ export default function GiftDetailScreen() {
 
         {gift.status === "opened" && <OpenedView gift={gift} />}
         {gift.status === "draft" && (
-          <View style={styles.draftNotice}>
-            <Gift size={24} color={C.textMuted} />
-            <Text style={styles.draftNoticeText}>Este presente está em rascunho. Finalize a criação para gerar o clipe.</Text>
-          </View>
+          <>
+            <View style={styles.draftNotice}>
+              <Gift size={24} color={C.textMuted} />
+              <Text style={styles.draftNoticeText}>Este presente ainda não foi gerado.</Text>
+            </View>
+            {isStuckDraft && (
+              <View style={styles.diagnoseCard}>
+                <View style={styles.diagnoseIcon}><AlertTriangle size={18} color={C.gold} /></View>
+                <View style={styles.diagnoseBody}>
+                  <Text style={styles.diagnoseTitle}>Clipe não gerado</Text>
+                  <Text style={styles.diagnoseText}>A geração pode ter falhado ou nunca foi disparada. Tente novamente abaixo.</Text>
+                </View>
+              </View>
+            )}
+            <View style={styles.draftActions}>
+              {isStuckDraft && (
+                <GradientButton
+                  label={regenerating ? "Reprocessando..." : "Reprocessar clipe"}
+                  onPress={handleRegenerate}
+                  loading={regenerating}
+                  icon={<RefreshCw size={18} color={C.white} />}
+                />
+              )}
+              <GradientButton
+                label="Excluir rascunho"
+                onPress={handleDelete}
+                variant="ghost"
+                icon={<Trash2 size={18} color={C.coral} />}
+              />
+            </View>
+          </>
         )}
       </ScrollView>
     </View>

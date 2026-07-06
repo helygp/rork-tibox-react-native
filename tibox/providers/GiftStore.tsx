@@ -333,6 +333,35 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
     setPollingIds((prev) => new Set(prev).add(id));
   }, []);
 
+  /* ── Regenerate a stuck/failed gift ──
+   * Re-triggers AI generation for a gift that never progressed past "draft".
+   * Sets local status to "generating" so the UI can route to the loader,
+   * and kicks off polling so it transitions automatically when ready.
+   */
+  const regenerateGift = useCallback(
+    async (id: string): Promise<void> => {
+      const updateFn = (prev: Gift[] | undefined) =>
+        (prev ?? []).map((g) =>
+          g.id === id ? { ...g, status: "generating" as const } : g,
+        );
+      setLocalGifts((prev) => {
+        const next = updateFn(prev);
+        void persistCachedGifts(next);
+        return next;
+      });
+      queryClient.setQueryData<Gift[]>(["gifts", user?.id], (prev: Gift[] | undefined) =>
+        updateFn(prev),
+      );
+      void updateGift(id, { status: "generating" }).catch(() => {});
+      void startGeneration(id).catch((err) =>
+        console.log("[GiftStore] regenerate startGeneration failed", err),
+      );
+      startPolling(id);
+      retriedGenerationRef.current.add(id);
+    },
+    [queryClient, user?.id, startPolling],
+  );
+
   /* ── Background reconciler ──
    * Any gift that isn't in a terminal state (still "generating" — or stuck in
    * "draft" because the generation call never fired/succeeded) is kept in sync
@@ -454,6 +483,7 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
       markReady,
       markOpened,
       startPolling,
+      regenerateGift,
       getByPublicId,
       getById,
       removeGift,
@@ -470,6 +500,7 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
       markReady,
       markOpened,
       startPolling,
+      regenerateGift,
       getByPublicId,
       getById,
       removeGift,
