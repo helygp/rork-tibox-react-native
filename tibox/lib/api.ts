@@ -126,8 +126,56 @@ function normalizeDeliveryMode(raw: Record<string, unknown>): DeliveryMode {
   return "now";
 }
 
+/** Normalize the backend's status into the app's GiftStatus union.
+ *  The backend uses a smaller set of statuses than the app:
+ *    - "draft"     → still creating / generation not started
+ *    - "generating" → AI clip in progress
+ *    - "ready"      → clip finished (covers both "ready" and "scheduled")
+ *    - "sent"       → gift was shared AND opened (has opened_at)
+ *  The app expects: draft | generating | scheduled | ready | opened | delivered.
+ *  We bridge the gap here so the rest of the app can keep using its richer model.
+ */
+function normalizeStatus(
+  raw: Record<string, unknown>,
+  deliveryMode: DeliveryMode,
+  scheduledFor: string | undefined,
+): GiftStatus {
+  const backendStatus = pick<string>(raw, "status");
+  const openedAt = pick<string>(raw, "openedAt", "opened_at");
+
+  // "sent" = the gift was opened by the recipient.
+  if (backendStatus === "sent") {
+    return openedAt ? "opened" : "delivered";
+  }
+
+  // The backend keeps scheduled gifts as "ready" — promote them to "scheduled"
+  // so the UI can show the countdown / schedule banner.
+  if (
+    backendStatus === "ready" &&
+    deliveryMode === "scheduled" &&
+    scheduledFor &&
+    new Date(scheduledFor).getTime() > Date.now()
+  ) {
+    return "scheduled";
+  }
+
+  if (
+    backendStatus === "ready" ||
+    backendStatus === "draft" ||
+    backendStatus === "generating"
+  ) {
+    return backendStatus as GiftStatus;
+  }
+
+  return "draft";
+}
+
 function normalizeGift(raw: Record<string, unknown>, fallback?: Partial<Gift>): Gift {
   const mediaRaw = pick<Record<string, unknown>[]>(raw, "media") ?? [];
+  const deliveryMode = normalizeDeliveryMode(raw);
+  const scheduledFor =
+    pick<string>(raw, "scheduledFor", "deliveryDate", "delivery_date") ??
+    fallback?.scheduledFor;
   return {
     id: pick<string>(raw, "id") ?? fallback?.id ?? "",
     recipientName:
@@ -153,12 +201,12 @@ function normalizeGift(raw: Record<string, unknown>, fallback?: Partial<Gift>): 
     style: (pick<string>(raw, "mood", "style") as GiftStyle) ?? fallback?.style ?? "romantico",
     genre: (pick<string>(raw, "genre") as MusicGenre | undefined) ?? fallback?.genre,
     city: pick<string>(raw, "city") ?? fallback?.city,
-    deliveryMode: normalizeDeliveryMode(raw),
-    scheduledFor: pick<string>(raw, "scheduledFor", "deliveryDate", "delivery_date") ?? fallback?.scheduledFor,
+    deliveryMode,
+    scheduledFor,
     notifyWhatsapp:
       pick<boolean>(raw, "notifyWhatsapp", "notifyWhats", "notify_whats") ?? fallback?.notifyWhatsapp ?? false,
     unlockCode: pick<string>(raw, "unlockCode", "passcode") ?? fallback?.unlockCode ?? "",
-    status: (pick<string>(raw, "status") as GiftStatus) ?? fallback?.status ?? "draft",
+    status: normalizeStatus(raw, deliveryMode, scheduledFor),
     clipUri: pick<string>(raw, "clipUrl", "clip_url", "clipUri") ?? fallback?.clipUri,
     publicId: pick<string>(raw, "publicId", "public_id", "unique_slug", "uniqueSlug", "slug") ?? fallback?.publicId ?? "",
     createdAt: pick<string>(raw, "createdAt", "created_at") ?? fallback?.createdAt ?? new Date().toISOString(),

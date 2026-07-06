@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import CodeInput from "@/components/CodeInput";
 import { useColors, useGradients } from "@/constants/colors";
+import { getPublicGift, unlockPublicGift } from "@/lib/api";
 import { useGiftStore } from "@/providers/GiftStore";
 import type { Gift } from "@/types/gift";
 
@@ -189,8 +190,29 @@ export default function PublicGiftScreen() {
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [apiGift, setApiGift] = useState<Gift | null>(null);
+  const [apiLoading, setApiLoading] = useState(true);
 
-  const gift = useMemo(() => (publicId ? getByPublicId(publicId) : undefined), [publicId, getByPublicId]);
+  // The recipient opens this screen on their own device, where the gift is
+  // NOT in the local store. Fetch it from the public API instead. On the
+  // sender's device we fall back to the local store for instant display.
+  const localGift = useMemo(
+    () => (publicId ? getByPublicId(publicId) : undefined),
+    [publicId, getByPublicId],
+  );
+
+  useEffect(() => {
+    if (!publicId) return;
+    let cancelled = false;
+    setApiLoading(true);
+    getPublicGift(publicId)
+      .then((g) => { if (!cancelled) setApiGift(g); })
+      .catch(() => { if (!cancelled) setApiGift(null); })
+      .finally(() => { if (!cancelled) setApiLoading(false); });
+    return () => { cancelled = true; };
+  }, [publicId]);
+
+  const gift = localGift ?? apiGift ?? undefined;
 
   // Agendamento: se o presente tem scheduledFor no futuro, bloqueia o acesso
   // até a data — mesmo se o clipe já está pronto.
@@ -199,10 +221,29 @@ export default function PublicGiftScreen() {
 
   useEffect(() => { if (gift && (gift.status === "opened" || gift.status === "delivered") && !isLocked) { setUnlocked(true); } }, [gift, isLocked]);
 
-  const handleUnlock = useCallback(() => {
+  const handleUnlock = useCallback(async () => {
     if (!gift) return;
-    if (code === gift.unlockCode) { setError(false); setUnlocked(true); void markOpened(gift.publicId); }
-    else { setError(true); setCode(""); }
+    // Try the backend unlock first (validates the passcode server-side).
+    try {
+      const result = await unlockPublicGift(gift.publicId, code);
+      if (result.unlocked) {
+        setError(false);
+        setUnlocked(true);
+        void markOpened(gift.publicId);
+        return;
+      }
+    } catch {
+      // Backend unlock failed — fall back to local comparison (sender's
+      // device or offline).
+    }
+    if (code === gift.unlockCode) {
+      setError(false);
+      setUnlocked(true);
+      void markOpened(gift.publicId);
+    } else {
+      setError(true);
+      setCode("");
+    }
   }, [gift, code, markOpened]);
 
   const styles = useMemo(() => StyleSheet.create({

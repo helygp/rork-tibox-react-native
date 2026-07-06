@@ -352,11 +352,28 @@ export const [GiftStoreProvider, useGiftStore] = createContextHook(() => {
       queryClient.setQueryData<Gift[]>(["gifts", user?.id], (prev: Gift[] | undefined) =>
         updateFn(prev),
       );
-      void updateGift(id, { status: "generating" }).catch(() => {});
-      void startGeneration(id).catch((err) =>
-        console.log("[GiftStore] regenerate startGeneration failed", err),
-      );
-      startPolling(id);
+      // NOTE: we intentionally do NOT PATCH status=generating here — the
+      // backend rejects that with 400 "Nada para atualizar" because it only
+      // accepts clip/status transitions it performs itself. We just re-fire
+      // generation and let polling pick up the new status.
+      void startGeneration(id)
+        .then(() => startPolling(id))
+        .catch((err) => {
+          console.log("[GiftStore] regenerate startGeneration failed", err);
+          // Revert local status to draft so the UI shows the reprocess button.
+          const revert = (prev: Gift[] | undefined) =>
+            (prev ?? []).map((g) =>
+              g.id === id ? { ...g, status: "draft" as const } : g,
+            );
+          setLocalGifts((prev) => {
+            const next = revert(prev);
+            void persistCachedGifts(next);
+            return next;
+          });
+          queryClient.setQueryData<Gift[]>(["gifts", user?.id], (prev) =>
+            revert(prev),
+          );
+        });
       retriedGenerationRef.current.add(id);
     },
     [queryClient, user?.id, startPolling],
